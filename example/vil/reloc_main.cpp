@@ -52,6 +52,8 @@ int main(int argc, char **argv)
             {
                 window.SetRGBSource(image);
                 window.SetDepthSource(depth);
+
+                std::cout << "processing new image" << std::endl;
                 // slam.process_images(depth, image, K, bSubmapping, bSemantic, bRecord);
                 slam.relocalize_image(depth, image, K);
                 if(bInitial){
@@ -59,6 +61,7 @@ int main(int argc, char **argv)
                     slam.readMapFromDisk(map_path);
                     bInitial = false;
                 }
+                std::cout << "finished current relocalising" << std::endl;
                 
                 window.SetDetectedSource(slam.get_detected_image());
                 window.SetRenderScene(slam.get_rendered_scene());
@@ -66,6 +69,7 @@ int main(int argc, char **argv)
                 // window.SetMask(slam.get_segmented_mask());
                 window.SetCurrentCamera(slam.get_camera_pose());
                 window.mbFlagUpdateMesh = true;
+                std::cout << "updated all window displays" << std::endl;
 
                 if(image_counter > num_img || slam.pause_window)
                     window.SetPause();
@@ -81,7 +85,9 @@ int main(int argc, char **argv)
                 window.mbFlagUpdateMesh = false;
             }
 
+            std::cout << "render the window again" << std::endl;
             window.Render();
+            std::cout << "render done" << std::endl;
         }
     }
     else
@@ -113,7 +119,7 @@ bool load_next_image_vil_sequence(cv::Mat &depth, cv::Mat &color, std::string im
     // depth
     std::string name_depth = img_path + "/depth/" + std::to_string(image_counter) + ".png";
     depth = cv::imread(name_depth, cv::IMREAD_UNCHANGED);
-    // // normalize for the purpose of visualization
+    // normalize for the purpose of visualization
     // cv::Mat scaledDepth;
     // normalize(depth, scaledDepth, 0, 255, cv::NORM_MINMAX, CV_8UC1);
     // // scaledDepth.convertTo(scaledDepth, CV_8U, 1);
