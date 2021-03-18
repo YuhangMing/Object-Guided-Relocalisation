@@ -12,5 +12,8 @@ Object-Guided-Relocalisation
 
 ## 2. REPO USAGE
 executable data_path folder_name sequence_number display_or_not
+
 eg.
+```shell
 ./bin/vil_const ~/SLAMs/datasets/ BOR 5 true
+```
