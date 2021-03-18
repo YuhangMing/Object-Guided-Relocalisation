@@ -33,7 +33,7 @@ int main(int argc, char **argv)
     // load GT, pose_reloc, geom_reloc
     slam.load_pose_info(folder, sequence_id);
 
-    std::string img_path = data_path + folder + "/sequence0" + std::to_string(sequence_id) + "/Relocalisation";
+    std::string img_path = data_path + folder + "/sequence0" + std::to_string(sequence_id) + "/Construction";
     std::cout << img_path << std::endl;
 
     if(display == "true"){

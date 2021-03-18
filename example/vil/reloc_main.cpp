@@ -53,7 +53,7 @@ int main(int argc, char **argv)
                 window.SetRGBSource(image);
                 window.SetDepthSource(depth);
 
-                std::cout << "processing new image" << std::endl;
+                // std::cout << "processing new image" << std::endl;
                 // slam.process_images(depth, image, K, bSubmapping, bSemantic, bRecord);
                 slam.relocalize_image(depth, image, K);
                 if(bInitial){
@@ -61,7 +61,7 @@ int main(int argc, char **argv)
                     slam.readMapFromDisk(map_path);
                     bInitial = false;
                 }
-                std::cout << "finished current relocalising" << std::endl;
+                // std::cout << "finished current relocalising" << std::endl;
                 
                 window.SetDetectedSource(slam.get_detected_image());
                 window.SetRenderScene(slam.get_rendered_scene());
@@ -69,7 +69,7 @@ int main(int argc, char **argv)
                 // window.SetMask(slam.get_segmented_mask());
                 window.SetCurrentCamera(slam.get_camera_pose());
                 window.mbFlagUpdateMesh = true;
-                std::cout << "updated all window displays" << std::endl;
+                // std::cout << "updated all window displays" << std::endl;
 
                 if(image_counter > num_img || slam.pause_window)
                     window.SetPause();
@@ -85,9 +85,9 @@ int main(int argc, char **argv)
                 window.mbFlagUpdateMesh = false;
             }
 
-            std::cout << "render the window again" << std::endl;
+            // std::cout << "render the window again" << std::endl;
             window.Render();
-            std::cout << "render done" << std::endl;
+            // std::cout << "render done" << std::endl;
         }
     }
     else
