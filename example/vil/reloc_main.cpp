@@ -113,12 +113,12 @@ bool load_next_image_vil_sequence(cv::Mat &depth, cv::Mat &color, std::string im
     // depth
     std::string name_depth = img_path + "/depth/" + std::to_string(image_counter) + ".png";
     depth = cv::imread(name_depth, cv::IMREAD_UNCHANGED);
-    // normalize for the purpose of visualization
-    cv::Mat scaledDepth;
-    normalize(depth, scaledDepth, 0, 255, cv::NORM_MINMAX, CV_8UC1);
-    // scaledDepth.convertTo(scaledDepth, CV_8U, 1);
-    cv::imshow("Depth", scaledDepth);
-    int k = cv::waitKey(0);
+    // // normalize for the purpose of visualization
+    // cv::Mat scaledDepth;
+    // normalize(depth, scaledDepth, 0, 255, cv::NORM_MINMAX, CV_8UC1);
+    // // scaledDepth.convertTo(scaledDepth, CV_8U, 1);
+    // cv::imshow("Depth", scaledDepth);
+    // int k = cv::waitKey(0);
 
     // color
     std::string name_color = img_path + "/color/" + std::to_string(image_counter) + ".png";
