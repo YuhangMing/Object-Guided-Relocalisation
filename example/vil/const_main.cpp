@@ -5,7 +5,7 @@
 bool load_next_image_vil_sequence(cv::Mat &depth, cv::Mat &color, std::string img_path, int id);
 int image_counter;
 //- BOR sequences
-int num_img[10] = {3522, 1237, 887, 1221, 809, 1141, 919, 1470, 501, 870};      // num of frames for construction
+int num_img[10] = {3522, 1237, 887, 1221, 809, 300, 919, 1470, 501, 870};      // num of frames for construction
 
 int main(int argc, char **argv)
 {
@@ -33,7 +33,7 @@ int main(int argc, char **argv)
     // load GT, pose_reloc, geom_reloc
     slam.load_pose_info(folder, sequence_id);
 
-    std::string img_path = data_path + folder + "/sequence0" + std::to_string(sequence_id) + "/Construction";
+    std::string img_path = data_path + folder + "/sequence0" + std::to_string(sequence_id) + "/Relocalisation";
     std::cout << img_path << std::endl;
 
     if(display == "true"){
@@ -62,8 +62,8 @@ int main(int argc, char **argv)
                 // window.SetDepthSource(slam.get_shaded_depth());      // rendered depth
                 window.SetRenderScene(slam.get_rendered_scene());
                 // window.SetRenderScene(slam.get_rendered_scene_textured());
-                window.SetNOCSMap(slam.get_NOCS_map());
-                window.SetMask(slam.get_segmented_mask());
+                // window.SetNOCSMap(slam.get_NOCS_map());
+                // window.SetMask(slam.get_segmented_mask());
                 window.SetCurrentCamera(slam.get_camera_pose());
                 window.mbFlagUpdateMesh = true;
 

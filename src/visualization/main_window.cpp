@@ -428,25 +428,29 @@ void MainWindow::Render()
         int reloc_id = slam->reloc_frame_id-1;
         if(reloc_id >= 0)
         {
+            std::cout << "trying to display GT" << std::endl;
             // GT for Relocalized Frames
             std::vector<Eigen::Matrix4f> gt_poses = slam->getGTposes();
-            glColor4f(0.f, 1.f, 0.f, 1.f);
-            Eigen::Matrix4f pose = gt_poses[reloc_id];
-            pangolin::glDrawFrustum(K.inverse().eval(), 640, 480, pose, 0.04f);
-            pangolin::glDrawAxis(pose, 0.02f);
-            glColor4f(1.f, 1.f, 1.f, 1.f);
-            if(bDisplayOtherPoses){
-                // NOCS Pose based relocalization result
-                // Current stores ORB baseline reloc result
-                std::vector<Eigen::Matrix4f> nocs_pose_results = slam->getNOCSPoseResults();
-                if(reloc_id < nocs_pose_results.size()){
-                    glColor4f(0.f, 0.f, 1.f, 1.f);
-                    auto nocs_pose = nocs_pose_results[reloc_id];
-                    pangolin::glDrawFrustum(K.inverse().eval(), 640, 480, nocs_pose, 0.02f);
-                    pangolin::glDrawAxis(nocs_pose, 0.02f);
-                    glColor4f(1.f, 1.f, 1.f, 1.f);
+            if(reloc_id < gt_poses.size()){
+                glColor4f(0.f, 1.f, 0.f, 1.f);
+                Eigen::Matrix4f pose = gt_poses[reloc_id];
+                pangolin::glDrawFrustum(K.inverse().eval(), 640, 480, pose, 0.04f);
+                pangolin::glDrawAxis(pose, 0.02f);
+                glColor4f(1.f, 1.f, 1.f, 1.f);
+                if(bDisplayOtherPoses){
+                    // NOCS Pose based relocalization result
+                    // Current stores ORB baseline reloc result
+                    std::vector<Eigen::Matrix4f> nocs_pose_results = slam->getNOCSPoseResults();
+                    if(reloc_id < nocs_pose_results.size()){
+                        glColor4f(0.f, 0.f, 1.f, 1.f);
+                        auto nocs_pose = nocs_pose_results[reloc_id];
+                        pangolin::glDrawFrustum(K.inverse().eval(), 640, 480, nocs_pose, 0.02f);
+                        pangolin::glDrawAxis(nocs_pose, 0.02f);
+                        glColor4f(1.f, 1.f, 1.f, 1.f);
+                    }
                 }
             }
+            std::cout << "GT displayed" << std::endl;
         }
     }
     if (*BoxDisplayKeyCameras)
