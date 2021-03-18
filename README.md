@@ -11,4 +11,6 @@ Object-Guided-Relocalisation
 - (Optional) [OpenNI2](https://structure.io/openni)
 
 ## 2. REPO USAGE
-
+executable data_path folder_name sequence_number display_or_not
+eg.
+./bin/vil_const ~/SLAMs/datasets/ BOR 5 true
