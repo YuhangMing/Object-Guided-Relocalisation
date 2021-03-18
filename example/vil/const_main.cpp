@@ -62,8 +62,8 @@ int main(int argc, char **argv)
                 // window.SetDepthSource(slam.get_shaded_depth());      // rendered depth
                 window.SetRenderScene(slam.get_rendered_scene());
                 // window.SetRenderScene(slam.get_rendered_scene_textured());
-                window.SetNOCSMap(slam.get_NOCS_map());
-                window.SetMask(slam.get_segmented_mask());
+                // window.SetNOCSMap(slam.get_NOCS_map());
+                // window.SetMask(slam.get_segmented_mask());
                 window.SetCurrentCamera(slam.get_camera_pose());
                 window.mbFlagUpdateMesh = true;
 

@@ -62,8 +62,8 @@ int main(int argc, char **argv)
                 
                 window.SetDetectedSource(slam.get_detected_image());
                 window.SetRenderScene(slam.get_rendered_scene());
-                window.SetNOCSMap(slam.get_NOCS_map());
-                window.SetMask(slam.get_segmented_mask());
+                // window.SetNOCSMap(slam.get_NOCS_map());
+                // window.SetMask(slam.get_segmented_mask());
                 window.SetCurrentCamera(slam.get_camera_pose());
                 window.mbFlagUpdateMesh = true;
 
