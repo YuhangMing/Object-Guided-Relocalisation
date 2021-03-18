@@ -428,7 +428,6 @@ void MainWindow::Render()
         int reloc_id = slam->reloc_frame_id-1;
         if(reloc_id >= 0)
         {
-            std::cout << "trying to display GT" << std::endl;
             // GT for Relocalized Frames
             std::vector<Eigen::Matrix4f> gt_poses = slam->getGTposes();
             if(reloc_id < gt_poses.size()){
@@ -450,7 +449,6 @@ void MainWindow::Render()
                     }
                 }
             }
-            std::cout << "GT displayed" << std::endl;
         }
     }
     if (*BoxDisplayKeyCameras)
