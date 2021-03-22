@@ -65,6 +65,7 @@ void SubMapManager::ResetSubmaps(){
 	activeTOpassiveIdx.clear();
 }
 
+/* Submapping disabled for now, need to be rewritten
 float SubMapManager::CheckVisPercent(int submapIdx){
 	return active_submaps[submapIdx]->CheckVisPercent();
 }
@@ -202,50 +203,50 @@ std::vector<Eigen::Matrix<float, 4, 4>> SubMapManager::GetKFPoses(){
 }
 
 void SubMapManager::GetPoints(float *pt3d, size_t &count, size_t max_size){
-	count = 0;
-	Sophus::SE3f Tw2rfinv = active_submaps[renderIdx]->poseGlobal.cast<float>().inverse();
+	// count = 0;
+	// Sophus::SE3f Tw2rfinv = active_submaps[renderIdx]->poseGlobal.cast<float>().inverse();
 	
-	// actives
-	for(size_t i=0; i<active_submaps.size(); ++i)
-	{
-		auto sm = active_submaps[i];
-		Sophus::SE3f Twm = sm->poseGlobal.cast<float>();
-		for(size_t j=0; j<sm->vKFs.size(); ++j)
-		{
-			auto kf = sm->vKFs[j];
-			for(size_t k=0; k<kf->key_points.size(); ++k)
-			{
-				auto pt = kf->key_points[k];
-				Eigen::Vector3f mp_global_renderSM = Tw2rfinv * Twm * pt->pos;
-				pt3d[count * 3 + 0] = mp_global_renderSM(0);
-	            pt3d[count * 3 + 1] = mp_global_renderSM(1);
-	            pt3d[count * 3 + 2] = mp_global_renderSM(2);
-	            count++;
-			}  // pts
-		}  // kfs
-    }  // sms
+	// // actives
+	// for(size_t i=0; i<active_submaps.size(); ++i)
+	// {
+	// 	auto sm = active_submaps[i];
+	// 	Sophus::SE3f Twm = sm->poseGlobal.cast<float>();
+	// 	for(size_t j=0; j<sm->vKFs.size(); ++j)
+	// 	{
+	// 		auto kf = sm->vKFs[j];
+	// 		for(size_t k=0; k<kf->key_points.size(); ++k)
+	// 		{
+	// 			auto pt = kf->key_points[k];
+	// 			Eigen::Vector3f mp_global_renderSM = Tw2rfinv * Twm * pt->pos;
+	// 			pt3d[count * 3 + 0] = mp_global_renderSM(0);
+	//             pt3d[count * 3 + 1] = mp_global_renderSM(1);
+	//             pt3d[count * 3 + 2] = mp_global_renderSM(2);
+	//             count++;
+	// 		}  // pts
+	// 	}  // kfs
+    // }  // sms
 
-    // passives
-    for(size_t i=0; i<passive_submaps.size(); ++i)
-	{
-		auto sm = passive_submaps[i];
-		Sophus::SE3f Twm = sm->poseGlobal.cast<float>();
-		for(size_t j=0; j<sm->vKFs.size(); ++j)
-		{
-			auto kf = sm->vKFs[j];
-			for(size_t k=0; k<kf->key_points.size(); ++k)
-			{
-				auto pt = kf->key_points[k];
-				Eigen::Vector3f mp_global_renderSM = Tw2rfinv * Twm * pt->pos;
-				pt3d[count * 3 + 0] = mp_global_renderSM(0);
-	            pt3d[count * 3 + 1] = mp_global_renderSM(1);
-	            pt3d[count * 3 + 2] = mp_global_renderSM(2);
-	            count++;
-			}  // pts
-		}  // kfs
-    }  // sms
+    // // passives
+    // for(size_t i=0; i<passive_submaps.size(); ++i)
+	// {
+	// 	auto sm = passive_submaps[i];
+	// 	Sophus::SE3f Twm = sm->poseGlobal.cast<float>();
+	// 	for(size_t j=0; j<sm->vKFs.size(); ++j)
+	// 	{
+	// 		auto kf = sm->vKFs[j];
+	// 		for(size_t k=0; k<kf->key_points.size(); ++k)
+	// 		{
+	// 			auto pt = kf->key_points[k];
+	// 			Eigen::Vector3f mp_global_renderSM = Tw2rfinv * Twm * pt->pos;
+	// 			pt3d[count * 3 + 0] = mp_global_renderSM(0);
+	//             pt3d[count * 3 + 1] = mp_global_renderSM(1);
+	//             pt3d[count * 3 + 2] = mp_global_renderSM(2);
+	//             count++;
+	// 		}  // pts
+	// 	}  // kfs
+    // }  // sms
 
-    // std::cout << "NUM KEY POINTS: " << count << std::endl;
+    // // std::cout << "NUM KEY POINTS: " << count << std::endl;
 }
 
 std::vector<std::pair<int, std::vector<float>>> SubMapManager::GetObjects(bool bMain)
@@ -401,10 +402,7 @@ std::vector<float> SubMapManager::GetPlaneNormals()
 void SubMapManager::SetTracker(std::shared_ptr<DenseOdometry> pOdometry){
 	odometry = pOdometry;
 }
-
-void SubMapManager::SetExtractor(std::shared_ptr<FeatureExtractor> pExtractor){
-	extractor = pExtractor;
-}
+*/
 
 void SubMapManager::readSMapFromDisk(std::string file_name)
 {

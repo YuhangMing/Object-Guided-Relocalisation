@@ -160,6 +160,8 @@ TrackingResult DenseTracking::compute_transform(const RgbdImagePtr reference, co
   return result;
 }
 
+/* Semantic & Reloc disabled for now.
+
 TrackingResult DenseTracking::compute_transform_depth_only(const RgbdImagePtr reference, const RgbdImagePtr current, const TrackingContext &c)
 {
   Revertable<Sophus::SE3d> estimate = Revertable<Sophus::SE3d>(Sophus::SE3d());
@@ -389,7 +391,7 @@ void DenseTracking::cent_reduce(const cv::Mat &curr_cent, const cv::Mat &last_ce
                                 const Sophus::SE3d &pose,
                                 float *jtj, float *jtr, float *residual)
 {
-  /* compute J^TJ and J^Tr */
+  // compute J^TJ and J^Tr
 
   // loop through all the centoids to compute values
   // std::cout << "looping through all the centroids.. " << std::endl;
@@ -449,7 +451,7 @@ void DenseTracking::cent_reduce(const cv::Mat &curr_cent, const cv::Mat &last_ce
   residual[0] = sum[27];
   residual[1] = sum[28];
 }
-
+*/
 
 void DenseTracking::swap_intensity_pyr()
 {

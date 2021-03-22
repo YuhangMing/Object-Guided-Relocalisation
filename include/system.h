@@ -9,9 +9,6 @@
 #include "voxel_hashing/voxel_hashing.h"
 #include "tracking/rgbd_odometry.h"
 #include "relocalization/relocalizer.h"
-#include "keyframe_graph/keyframe_graph.h"
-#include "features/extractor.h"
-#include "features/matcher.h"
 #include "map_manager.h"
 #include "detection/detector.h"
 
@@ -29,6 +26,8 @@ public:
     System(const fusion::IntrinsicMatrix base, const int NUM_PYR, bool bSemantic=true, bool bLoadSMap=false);
     void process_images(const cv::Mat depth, const cv::Mat image, const fusion::IntrinsicMatrix base, 
                         bool bSubmapping, bool bSemantic, bool bRecordSequence);
+    
+    /* Semantic & Reloc disabled for now.
     // pure relocalization
     void set_frame_id(size_t sid);
     void relocalize_image(const cv::Mat depth, const cv::Mat image, const fusion::IntrinsicMatrix base);
@@ -42,6 +41,7 @@ public:
     // detection result
     cv::Mat get_NOCS_map() const;
     cv::Mat get_segmented_mask() const;
+    */
 
     // create a mesh from the map
     // and save it to a named file
@@ -55,9 +55,9 @@ public:
     size_t fetch_mesh_with_normal(float *vertex, float *normal);
     size_t fetch_mesh_with_colour(float *vertex, unsigned char *colour);
 
-    // key points
-    void fetch_key_points(float *points, size_t &count, size_t max);
-    void fetch_key_points_with_normal(float *points, float *normal, size_t &max_size);
+    // // key points
+    // void fetch_key_points(float *points, size_t &count, size_t max);
+    // void fetch_key_points_with_normal(float *points, float *normal, size_t &max_size);
 
     bool is_initialized;
     mutable bool b_reloc_attp;
@@ -74,6 +74,8 @@ public:
 
     // visualization
     Eigen::Matrix4f get_camera_pose() const;
+    
+    /* Semantic & Reloc diasbled for now
     std::vector<Eigen::Matrix<float, 4, 4>> getKeyFramePoses() const;
     std::vector<Eigen::Matrix<float, 4, 4>> getGTposes() const;
     std::vector<Eigen::Matrix<float, 4, 4>> vRelocPoses;
@@ -98,7 +100,7 @@ public:
     // test
     // std::map<int, Eigen::Matrix<float, 4, 4>> maGTposes;
     std::vector<Eigen::Matrix<float, 4, 4>> vGTposes;
-    int reloc_frame_id;
+    
     void load_pose_info(std::string folder, int seq_id);
     void load_from_text(std::string file_name, std::vector<Eigen::Matrix4f>& v_results);
     // void load_from_text(std::string file_name, std::map<int, Eigen::Matrix4f>& ma_results);
@@ -110,6 +112,8 @@ public:
     std::vector<Eigen::Matrix4f> getNOCSPoseResults() const;
     std::vector<Eigen::Matrix4f> v_MaskRCNN_results;
     std::vector<Eigen::Matrix4f> getMaskRCNNResults() const;
+    */
+   int reloc_frame_id;
 
 private:
     // no more separate keyframe structure, keyframe is frame
@@ -119,26 +123,13 @@ private:
     size_t frame_id;
     // size_t sequence_id;
     size_t frame_start_reloc_id;
+    bool hasNewKeyFrame;
 
     // System modules
     std::shared_ptr<SubMapManager> manager;
-    // std::shared_ptr<DenseMapping> mapping;
     std::shared_ptr<DenseOdometry> odometry;
-    std::shared_ptr<KeyFrameGraph> graph;
-    std::shared_ptr<Relocalizer> relocalizer;
-    std::shared_ptr<FeatureExtractor> extractor;
-    std::shared_ptr<DescriptorMatcher> matcher;
-    // NOCS * nocsdetector;
-    semantic::Detector * detector;
-    std::thread graphThread;
 
-    // Return TRUE if a new key frame is desired
-    // return FALSE otherwise
-    // TODO: this needs to be redesigned.
-    bool keyframe_needed() const;
-    void create_keyframe();
     void initialization();
-    bool hasNewKeyFrame;
     Sophus::SE3d initialPose;
 
     cv::cuda::GpuMat device_depth_float;
@@ -147,13 +138,21 @@ private:
     cv::cuda::GpuMat device_nmap_cast;
 
     int renderIdx;
-    std::vector<Sophus::SE3d> gt_pose;
+    // std::vector<Sophus::SE3d> gt_pose;
+
+    /* Semantic & Reloc disabled for now.
+    std::shared_ptr<Relocalizer> relocalizer;
+    // NOCS * nocsdetector;
+    semantic::Detector * detector;
+
+    bool keyframe_needed() const;
+    void create_keyframe();
 
     // semantic analysis
     void extract_objects(RgbdFramePtr frame, bool bGeoSeg, float lamb, float tao, int win_size, int thre);
     void extract_planes(RgbdFramePtr frame);
     void extract_semantics(RgbdFramePtr frame, bool bGeoSeg, float lamb, float tao, int win_size, int thre);
-    
+    */
 };
 
 } // namespace fusion

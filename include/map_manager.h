@@ -28,6 +28,7 @@ public:
 
 	void ResetSubmaps();
 
+	/*
 	float CheckVisPercent(int submapIdx);
 	void CheckActive();
 	void CheckTrackAndRender(int cur_frame_id, int max_perct_idx);
@@ -46,6 +47,7 @@ public:
 
 	void SetTracker(std::shared_ptr<DenseOdometry> pOdometry);
 	void SetExtractor(std::shared_ptr<FeatureExtractor> pExtractor);
+	*/
 
 	std::shared_ptr<DenseOdometry> odometry;
 
@@ -69,7 +71,6 @@ public:
 protected:
 
 private:
-	std::shared_ptr<FeatureExtractor> extractor;
 
 	std::mutex mMutexDownload;
 	int ref_frame_id;

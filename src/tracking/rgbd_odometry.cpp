@@ -71,6 +71,7 @@ void DenseOdometry::trackFrame(std::shared_ptr<RgbdFrame> frame)
   }
 }
 
+/* Semantic & Reloc disabled for now.
 void DenseOdometry::trackDepthOnly(std::shared_ptr<RgbdFrame> frame, float& icp_error)
 {
   upload(frame);
@@ -139,6 +140,7 @@ void DenseOdometry::trackDepthAndCentroid(std::shared_ptr<RgbdFrame> frame, floa
     trackingLost = true;
   }
 }
+*/
 
 std::shared_ptr<DeviceImage> DenseOdometry::get_current_image() const
 {

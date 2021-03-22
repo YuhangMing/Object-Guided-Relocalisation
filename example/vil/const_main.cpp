@@ -30,8 +30,6 @@ int main(int argc, char **argv)
 
 	fusion::IntrinsicMatrix K(640, 480, 580, 580, 319.5, 239.5);
     fusion::System slam(K, 5, bSemantic);
-    // load GT, pose_reloc, geom_reloc
-    slam.load_pose_info(folder, sequence_id);
 
     std::string img_path = data_path + folder + "/sequence0" + std::to_string(sequence_id) + "/Construction";
     std::cout << img_path << std::endl;
@@ -48,22 +46,13 @@ int main(int argc, char **argv)
                 window.SetDepthSource(depth);   // raw depth
                 // std::clock_t start = std::clock();
                 slam.process_images(depth, image, K, bSubmapping, bSemantic, bRecord);
-                /*
-                For key frames, it takes 0.8s~1s to process
-                    object detection: ~0.4s
-                    SURF points detection: ~0.4s
-                For other frames, it usually takes 0.02s, but sometimes could take around 0.1s
-                */
                 // std::cout << "## Processing an image takes "
                     //     << ( std::clock() - start ) / (double) CLOCKS_PER_SEC 
                     //     << " seconds" << std::endl;
-                
+                /* Semantic & Reloc Disabled for now
                 window.SetDetectedSource(slam.get_detected_image());
-                // window.SetDepthSource(slam.get_shaded_depth());      // rendered depth
                 window.SetRenderScene(slam.get_rendered_scene());
-                // window.SetRenderScene(slam.get_rendered_scene_textured());
-                // window.SetNOCSMap(slam.get_NOCS_map());
-                // window.SetMask(slam.get_segmented_mask());
+                */
                 window.SetCurrentCamera(slam.get_camera_pose());
                 window.mbFlagUpdateMesh = true;
 

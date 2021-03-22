@@ -26,8 +26,8 @@ public:
 
   bool trackingLost;
   void trackFrame(std::shared_ptr<RgbdFrame> frame);
-  void trackDepthOnly(std::shared_ptr<RgbdFrame> frame, float& icp_error);
-  void trackDepthAndCentroid(std::shared_ptr<RgbdFrame> frame, float& icp_error);
+  // void trackDepthOnly(std::shared_ptr<RgbdFrame> frame, float& icp_error);
+  // void trackDepthAndCentroid(std::shared_ptr<RgbdFrame> frame, float& icp_error);
   void reset();
   void relocUpdate(std::shared_ptr<RgbdFrame> frame);
 

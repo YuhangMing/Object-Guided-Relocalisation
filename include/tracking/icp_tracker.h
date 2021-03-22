@@ -31,8 +31,8 @@ public:
   DenseTracking();
   DenseTracking(const IntrinsicMatrix K, const int NUM_PYR);
   TrackingResult compute_transform(const RgbdImagePtr reference, const RgbdImagePtr current, const TrackingContext &c);
-  TrackingResult compute_transform_depth_only(const RgbdImagePtr reference, const RgbdImagePtr current, const TrackingContext &c);
-  TrackingResult compute_transform_depth_centroids(const RgbdImagePtr reference, const RgbdImagePtr current, const TrackingContext &c);
+  // TrackingResult compute_transform_depth_only(const RgbdImagePtr reference, const RgbdImagePtr current, const TrackingContext &c);
+  // TrackingResult compute_transform_depth_centroids(const RgbdImagePtr reference, const RgbdImagePtr current, const TrackingContext &c);
 
   TrackingResult compute_transform(const TrackingContext &c);
   void swap_intensity_pyr();

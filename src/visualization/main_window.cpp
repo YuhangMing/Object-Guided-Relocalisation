@@ -51,21 +51,22 @@ void MainWindow::InitTextures()
         GL_UNSIGNED_BYTE,
         NULL);
 
-    TextureDetected.Reinitialise(
-        640, 480,
-        GL_RGB,
-        true,
-        0,
-        GL_RGB,
-        GL_UNSIGNED_BYTE,
-        NULL);
-
     TextureDepth.Reinitialise(
         640, 480,
         GL_LUMINANCE,
         true,
         0,
         GL_LUMINANCE,
+        GL_UNSIGNED_BYTE,
+        NULL);
+
+    /* Semantic & Reloc diasbled for now
+    TextureDetected.Reinitialise(
+        640, 480,
+        GL_RGB,
+        true,
+        0,
+        GL_RGB,
         GL_UNSIGNED_BYTE,
         NULL);
 
@@ -95,6 +96,7 @@ void MainWindow::InitTextures()
         GL_LUMINANCE,
         GL_UNSIGNED_BYTE,
         NULL);
+    */
 }
 
 void MainWindow::InitMeshBuffers()
@@ -202,6 +204,8 @@ void MainWindow::SetupDisplays()
     // display name, current val, min, max;
     BarSwitchMap = std::make_shared<pangolin::Var<int>>("Menu.Display Map", 2, 0, 2);
     BoxDisplayCamera = std::make_shared<pangolin::Var<bool>>("Menu.Current Camera", true, true);
+    
+    /* Semantic disabled for now
     BoxDisplayKeyCameras = std::make_shared<pangolin::Var<bool>>("Menu.Stored KeyFrames", false, true);
     BoxDisplayRelocTrajectory = std::make_shared<pangolin::Var<bool>>("Menu.Reloc Frames", false, true);
     
@@ -215,6 +219,7 @@ void MainWindow::SetupDisplays()
     BoxDisplayPtCloudReloc = std::make_shared<pangolin::Var<bool>>("Menu.Frame PtCloud", false, true);
     BoxDisplayWorldOrigin = std::make_shared<pangolin::Var<bool>>("Menu.Wrold Origin", false, true);
     // BoxRecordData = std::make_shared<pangolin::Var<bool>>("Menu.Record Dataset", true, true);
+    */
 
     mpViewSideBar = &pangolin::Display("Right Side Bar");
     mpViewSideBar->SetBounds(0, 1, RightSideBarDividerLeft, 1);
@@ -290,6 +295,7 @@ void MainWindow::SetDepthSource(cv::Mat DepthImage)
     TextureDepth.Upload(Depth_8bit.data, GL_LUMINANCE, GL_UNSIGNED_BYTE);
 }
 
+/* Semantic disabled for now
 void MainWindow::SetDetectedSource(cv::Mat DetectedImage)
 {
     TextureDetected.Upload(DetectedImage.data, GL_RGB, GL_UNSIGNED_BYTE);
@@ -304,6 +310,7 @@ void MainWindow::SetNOCSMap(cv::Mat SceneImage)
 {
     TextureNOCSMap.Upload(SceneImage.data, GL_RGB, GL_UNSIGNED_BYTE);
 }
+
 void MainWindow::SetMask(cv::Mat mask)
 {
     if(!mask.empty())
@@ -313,6 +320,8 @@ void MainWindow::SetMask(cv::Mat mask)
 void MainWindow::SetFeatureImage(cv::Mat featureImage)
 {
 }
+*/
+
 
 void MainWindow::Render()
 {
@@ -347,8 +356,8 @@ void MainWindow::Render()
             UpdateMeshWithNormal();
     }
 
-    if(bRecording)
-    {
+    // if(bRecording)
+    // {
         if (*BoxDisplayScene)
         {
             mpViewRelocView->Activate();
@@ -359,20 +368,20 @@ void MainWindow::Render()
             mpViewRGB->Activate();
             TextureRGB.RenderToViewportFlipY();
         }
-    } 
-    else 
-    {
-        if (*BoxDisplayScene)
-        {
-            mpViewRelocView->Activate();
-            TextureScene.RenderToViewportFlipY();
-        }
-        if (*BoxDisplayImage)
-        {
-            mpViewRGB->Activate();
-            TextureDetected.RenderToViewportFlipY();
-        }
-    }
+    // } 
+    // else 
+    // {
+    //     if (*BoxDisplayScene)
+    //     {
+    //         mpViewRelocView->Activate();
+    //         TextureScene.RenderToViewportFlipY();
+    //     }
+    //     if (*BoxDisplayImage)
+    //     {
+    //         mpViewRGB->Activate();
+    //         TextureDetected.RenderToViewportFlipY();
+    //     }
+    // }
     
     // if (*BoxDisplayDepth)
     // {
@@ -425,6 +434,7 @@ void MainWindow::Render()
         pangolin::glDrawAxis(CameraPose, 0.02f);
         glColor4f(1.f, 1.f, 1.f, 1.f);
         
+        /* Reloc Disabled for now
         int reloc_id = slam->reloc_frame_id-1;
         if(reloc_id >= 0)
         {
@@ -450,7 +460,10 @@ void MainWindow::Render()
                 }
             }
         }
+        */
     }
+
+    /* Semantic and Reloc Disabled for now
     if (*BoxDisplayKeyCameras)
     {
         auto keyframe_poses = slam->getKeyFramePoses();
@@ -635,7 +648,6 @@ void MainWindow::Render()
                 break;
         }
     }
-    // ---------------------------------------
 
     if (IsPaused())
     {
@@ -945,8 +957,10 @@ void MainWindow::Render()
         // {
         //     slam->recordSequence("~/SLAM_work/Datasets/");
         // }
+        
     }
-
+    */
+    
     pangolin::FinishFrame();
 
     auto t2 = std::chrono::system_clock::now();
@@ -1003,6 +1017,8 @@ void MainWindow::DrawMeshColoured()
     ShadingColorProg.Unbind();
 }
 
+
+/* Semantic & Reloc disabled for now.
 void MainWindow::DrawMeshNormalMapped()
 {
 }
@@ -1117,6 +1133,7 @@ void MainWindow::DrawPtClouds(int num_objs, int idx, bool bRel)
         glColor4f(1.f, 1.f, 1.f, 1.f);
     }
 }
+*/
 
 void MainWindow::SetCurrentCamera(Eigen::Matrix4f T)
 {

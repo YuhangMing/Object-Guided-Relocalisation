@@ -19,8 +19,9 @@ namespace fusion
 
 System::~System()
 {
-    graph->terminate();
-    graphThread.join();
+    // graph->terminate();
+    // graphThread.join();
+    // delete detector;
 }
 
 System::System(const fusion::IntrinsicMatrix base, const int NUM_PYR, bool bSemantic, bool bLoadSMap)
@@ -30,8 +31,6 @@ System::System(const fusion::IntrinsicMatrix base, const int NUM_PYR, bool bSema
     // mapping = std::make_shared<DenseMapping>(base);
     safe_call(cudaGetLastError());
     odometry = std::make_shared<DenseOdometry>(base, NUM_PYR);
-    extractor = std::make_shared<FeatureExtractor>();
-    matcher = std::make_shared<DescriptorMatcher>();
 
     #ifdef CUDA_MEM
         // inaccurate, the driver decides when to release the memory
@@ -43,8 +42,7 @@ System::System(const fusion::IntrinsicMatrix base, const int NUM_PYR, bool bSema
     #endif
     manager = std::make_shared<SubMapManager>();
     manager->Create(base, 0, true, true);
-    manager->SetTracker(odometry);
-    manager->SetExtractor(extractor);
+    // manager->SetTracker(odometry);
     odometry->SetManager(manager);
     #ifdef CUDA_MEM
         cudaMemGetInfo(&free_t0, &total_t0);
@@ -57,14 +55,14 @@ System::System(const fusion::IntrinsicMatrix base, const int NUM_PYR, bool bSema
                 << "   out of " << total_0 << " MB total memroy." << std::endl;
     #endif
 
-    graph = std::make_shared<KeyFrameGraph>(base, NUM_PYR);
-    graph->set_feature_extractor(extractor);
-    graph->set_descriptor_matcher(matcher);
+    // graph = std::make_shared<KeyFrameGraph>(base, NUM_PYR);
+    // graph->set_feature_extractor(extractor);
+    // graph->set_descriptor_matcher(matcher);
+    // graphThread = std::thread(&KeyFrameGraph::main_loop, graph.get());
 
+    /* Semantic & Reloc disabled for now.
     relocalizer = std::make_shared<Relocalizer>(base);
-    relocalizer->setDescriptorMatcher(matcher);
-    relocalizer->setFeatureExtractor(extractor);
-
+    
     if(bSemantic){
     #ifdef CUDA_MEM
         size_t free_t, total_t;
@@ -109,26 +107,26 @@ System::System(const fusion::IntrinsicMatrix base, const int NUM_PYR, bool bSema
     // odometry->SetDetector(detector);
     }
 
-    graphThread = std::thread(&KeyFrameGraph::main_loop, graph.get());
-
     // LOAD SEMANTIC MAPS
     if(bLoadSMap){
         manager->readSMapFromDisk("map");
     }
     output_file_name = "reloc";
-
     pause_window = false;
+    */
 }
 
 void System::initialization()
 {
     current_frame->pose = initialPose;
     
+    /* Semantic & Reloc diasbled for now
     // set key frame
     current_keyframe = current_frame;
     // graph->add_keyframe(current_keyframe);
     hasNewKeyFrame = true;
     std::cout << "\n-- KeyFrame needed at frame " << current_frame->id << std::endl; 
+    */
 
     is_initialized = true;
 
@@ -147,19 +145,19 @@ void System::initialization()
     }
     log_file.close();
 #endif
-    // start a new pose file
-    std::string name_pose = "/home/yohann/SLAMs/object-guided-relocalisation/pose_info/CENT/"+output_file_name+".txt";
-    std::ofstream pose_file;
-    pose_file.open(name_pose, std::ios::out);
-    if(pose_file.is_open())
-    {
-        pose_file << "";
-    }
-    else
-    {
-        std::cout << "!!!!ERROR: Unable to open the pose file." << std::endl;
-    }
-    pose_file.close();
+    // // start a new pose file
+    // std::string name_pose = "/home/yohann/SLAMs/object-guided-relocalisation/pose_info/CENT/"+output_file_name+".txt";
+    // std::ofstream pose_file;
+    // pose_file.open(name_pose, std::ios::out);
+    // if(pose_file.is_open())
+    // {
+    //     pose_file << "";
+    // }
+    // else
+    // {
+    //     std::cout << "!!!!ERROR: Unable to open the pose file." << std::endl;
+    // }
+    // pose_file.close();
 }
 
 void System::process_images(const cv::Mat depth, const cv::Mat image, const fusion::IntrinsicMatrix base, 
@@ -206,11 +204,14 @@ void System::process_images(const cv::Mat depth, const cv::Mat image, const fusi
             // std::cout << "Tracking - " << i <<  std::endl;
             // update pose of current_frame and reference_frame in corresponding DeviceImage
             odometry->trackFrame(current_frame);
+            
+            /* Semantic & Reloc diasbled for now
             //---- only create kf in the rendering map ----
             if(keyframe_needed() && i == renderIdx && !odometry->trackingLost)
             {
                 create_keyframe();
             }
+            */
         }
 
         /* RENDERING */
@@ -223,12 +224,14 @@ void System::process_images(const cv::Mat depth, const cv::Mat image, const fusi
                 manager->active_submaps[i]->update(reference_image);
                 manager->active_submaps[i]->raycast(reference_image->get_vmap(), reference_image->get_nmap(0), reference_frame->pose);
                 reference_image->resize_device_map();
+                
+                /*Semantic & Reloc diasbled for now
                 // add new keyframe in the map & calculate cuboids for objects detected
                 if(hasNewKeyFrame && bSemantic){
                     manager->AddKeyFrame(current_keyframe);
                     reference_image->downloadVNM(odometry->vModelFrames[i], false);
 
-                    /* Store vertex map.
+                    // // Store vertex map.
                     // // Store vertex map of current KF as point cloud in the file.
                     // // std::cout << "Type of vmap is ";
                     // // std::cout << odometry->vModelFrames[i]->vmap.type() << std::endl;
@@ -247,7 +250,7 @@ void System::process_images(const cv::Mat depth, const cv::Mat image, const fusi
                     //     } 
                     // }
                     // pcd_file.close();
-                    */
+                    
 
                     // perform semantic analysis on keyframe
                     extract_semantics(odometry->vModelFrames[i], false, 1, 0.002, 5, 7);
@@ -258,6 +261,7 @@ void System::process_images(const cv::Mat depth, const cv::Mat image, const fusi
                         manager->active_submaps[i]->raycast(reference_image->get_vmap(), reference_image->get_nmap(0), reference_image->get_object_mask(), reference_frame->pose);
                     }
                 }
+                */
             } else {
                 manager->active_submaps[i]->check_visibility(reference_image);
                 manager->active_submaps[i]->raycast(reference_image->get_vmap(), reference_image->get_nmap(0), reference_frame->pose);
@@ -270,65 +274,68 @@ void System::process_images(const cv::Mat depth, const cv::Mat image, const fusi
         /* RELOCALIZATION */
         else
         {
-            std::cout << "\n !!!! Tracking Lost at frame " << frame_id << "! Trying to recover..." << std::endl;
-            if(!bSemantic)
-                return;
-            reloc_frame_id++;
-            relocalization();
+            std::cout << "Relocalisation disabled for now." << std::endl;
+            return;
+
+            // std::cout << "\n !!!! Tracking Lost at frame " << frame_id << "! Trying to recover..." << std::endl;
+            // if(!bSemantic)
+            //     return;
+            // reloc_frame_id++;
+            // relocalization();
         }
 
         if(bSubmapping)
         {
-            // check visible block percentage
-            float tmp_perct = manager->CheckVisPercent(i);
-            if(tmp_perct < thres_passive){
-                std::cout << "Move submap " << manager->active_submaps[i]->submapIdx << " from active to passive."
-                          << " With visible_percentage = " << tmp_perct << std::endl;
-                manager->activeTOpassiveIdx.push_back(i);
-            }
-            if(tmp_perct > max_perct){
-                max_perct = tmp_perct;
-                max_perct_idx = i;
-            }
+            // // check visible block percentage
+            // float tmp_perct = manager->CheckVisPercent(i);
+            // if(tmp_perct < thres_passive){
+            //     std::cout << "Move submap " << manager->active_submaps[i]->submapIdx << " from active to passive."
+            //               << " With visible_percentage = " << tmp_perct << std::endl;
+            //     manager->activeTOpassiveIdx.push_back(i);
+            // }
+            // if(tmp_perct > max_perct){
+            //     max_perct = tmp_perct;
+            //     max_perct_idx = i;
+            // }
         }
     } // end for-active_submaps
 
     /* POST-PROCESSING */
     if(bSubmapping)
     {
-        // deactivate unwanted submaps
-        if(manager->activeTOpassiveIdx.size()>0)
-        {
-            renderIdx -= manager->activeTOpassiveIdx.size();
-            manager->CheckActive();
-        }
-        // std::cout << "check new sm/render&track" << std::endl;
-        // check if new submap is needed
-        if(max_perct < thres_new_sm)
-        {
-            std::cout << "NEW SUBMAP NEEDED at frame " << current_frame->id << std::endl;
-            // int new_map_idx_all = manager->all_submaps.size();
-            int new_map_idx_all = manager->active_submaps.size() + manager->passive_submaps.size();
-            manager->Create(base, new_map_idx_all, odometry->vModelDeviceMapPyramid[renderIdx], 
-                            false, true);
-            renderIdx = manager->renderIdx;
-            create_keyframe();
-            odometry->vModelDeviceMapPyramid[renderIdx]->downloadVNM(odometry->vModelFrames[renderIdx], odometry->trackingLost);
-            manager->AddKeyFrame(current_keyframe);
-        } 
-        // check which submap to track and render
-        else
-        {
-            // std::cout << renderIdx << "-" << odometry->vModelFrames.size() << std::endl;
-            manager->CheckTrackAndRender(odometry->vModelFrames[renderIdx]->id, max_perct_idx);
-        }
+        // // deactivate unwanted submaps
+        // if(manager->activeTOpassiveIdx.size()>0)
+        // {
+        //     renderIdx -= manager->activeTOpassiveIdx.size();
+        //     manager->CheckActive();
+        // }
+        // // std::cout << "check new sm/render&track" << std::endl;
+        // // check if new submap is needed
+        // if(max_perct < thres_new_sm)
+        // {
+        //     std::cout << "NEW SUBMAP NEEDED at frame " << current_frame->id << std::endl;
+        //     // int new_map_idx_all = manager->all_submaps.size();
+        //     int new_map_idx_all = manager->active_submaps.size() + manager->passive_submaps.size();
+        //     manager->Create(base, new_map_idx_all, odometry->vModelDeviceMapPyramid[renderIdx], 
+        //                     false, true);
+        //     renderIdx = manager->renderIdx;
+        //     // create_keyframe();
+        //     odometry->vModelDeviceMapPyramid[renderIdx]->downloadVNM(odometry->vModelFrames[renderIdx], odometry->trackingLost);
+        //     manager->AddKeyFrame(current_keyframe);
+        // } 
+        // // check which submap to track and render
+        // else
+        // {
+        //     // std::cout << renderIdx << "-" << odometry->vModelFrames.size() << std::endl;
+        //     manager->CheckTrackAndRender(odometry->vModelFrames[renderIdx]->id, max_perct_idx);
+        // }
     }
 
     /* OPTIMIZATION */
-    if (hasNewKeyFrame)
-    {
-        hasNewKeyFrame = false;
-    }
+    // if (hasNewKeyFrame)
+    // {
+    //     hasNewKeyFrame = false;
+    // }
 
     if (bRecordSequence)
     {
@@ -360,6 +367,77 @@ void System::process_images(const cv::Mat depth, const cv::Mat image, const fusi
     frame_id += 1;
 }
 
+void System::restart()
+{
+    // initialPose = last_tracked_frame->pose;
+    is_initialized = false;
+    frame_id = 0;
+
+    manager->ResetSubmaps();
+    odometry->reset();
+    // graph->reset();
+}
+
+void System::setLost(bool lost)
+{
+    odometry->trackingLost = true;
+}
+
+void System::save_mesh_to_file(const char *str)
+{
+}
+
+size_t System::fetch_mesh_vertex_only(float *vertex)
+{
+    return manager->active_submaps[renderIdx]->fetch_mesh_vertex_only(vertex);
+}
+
+size_t System::fetch_mesh_with_normal(float *vertex, float *normal)
+{
+    return manager->active_submaps[renderIdx]->fetch_mesh_with_normal(vertex, normal);
+}
+
+size_t System::fetch_mesh_with_colour(float *vertex, unsigned char *colour)
+{
+    return manager->active_submaps[renderIdx]->fetch_mesh_with_colour(vertex, colour);
+}
+
+// void System::fetch_key_points(float *points, size_t &count, size_t max)
+// {
+//     manager->GetPoints(points, count, max);
+// }
+
+// void System::fetch_key_points_with_normal(float *points, float *normal, size_t &max_size)
+// {
+// }
+
+void System::writeMapToDisk(std::string file_name) const
+{
+    // mapping->writeMapToDisk(file_name);
+    manager->active_submaps[0]->writeMapToDisk(file_name);
+}
+
+void System::readMapFromDisk(std::string file_name)
+{
+    std::cout << "Reading map from " << file_name << std::endl;
+    manager->active_submaps[0]->readMapFromDisk(file_name);
+}
+
+Eigen::Matrix4f System::get_camera_pose() const
+{
+    // Eigen::Matrix4f Tmf, Twm; 
+    Eigen::Matrix4f T;
+    if (odometry->get_reference_image(renderIdx))
+    {
+        // final display map is primary submap centered.
+        T = odometry->get_reference_image(renderIdx)->get_reference_frame()->pose.cast<float>().matrix();
+        // Twm = manager->active_submaps[renderIdx]->poseGlobal.cast<float>().matrix();
+        // T = Twm * Tmf;
+    }
+    return T;
+}
+
+/* Semantic & Reloc diasbled for now
 void System::relocalize_image(const cv::Mat depth, const cv::Mat image, const fusion::IntrinsicMatrix base)
 {
     cv::Mat depth_float;
@@ -376,11 +454,11 @@ void System::relocalize_image(const cv::Mat depth, const cv::Mat image, const fu
     // new frame for every submap
     current_frame = std::make_shared<RgbdFrame>(depth_float, image, frame_id, 0);
 
-    /* INITIALIZATION */ 
+    // INITIALIZATION 
     if (!is_initialized)
         initialization();
 
-    /* TRACKING */
+    // TRACKING
     // track the first frame to initialize, and load map and reloc
     if(frame_id > frame_start_reloc_id)
         odometry->trackingLost = true;
@@ -394,7 +472,7 @@ void System::relocalize_image(const cv::Mat depth, const cv::Mat image, const fu
         }
     }
 
-    /* RENDERING */
+    // RENDERING
     if (!odometry->trackingLost)
     {
         auto reference_image = odometry->get_reference_image(renderIdx);
@@ -424,7 +502,7 @@ void System::relocalize_image(const cv::Mat depth, const cv::Mat image, const fu
         odometry->setTrackIdx(renderIdx);
     }
     
-    /* RELOCALIZATION */
+    // RELOCALIZATION
     else
     {
         reloc_frame_id = frame_id - frame_start_reloc_id;
@@ -449,7 +527,7 @@ void System::relocalization()
 #endif
 
     std::clock_t start = std::clock();
-    /* perform OBJECT based relocalization */
+    // perform OBJECT based relocalization
     //-step 1: detect obejcts and estimate poses/cuboids in the current frame
     std::cout << "STEP 1: Extract objects." << std::endl;
     auto current_image = odometry->get_current_image();
@@ -792,75 +870,6 @@ cv::Mat System::get_segmented_mask() const
     return mScaledMask*255;
 }
 
-void System::restart()
-{
-    // initialPose = last_tracked_frame->pose;
-    is_initialized = false;
-    frame_id = 0;
-
-    manager->ResetSubmaps();
-    odometry->reset();
-    graph->reset();
-}
-
-void System::setLost(bool lost)
-{
-    odometry->trackingLost = true;
-}
-
-void System::save_mesh_to_file(const char *str)
-{
-}
-
-size_t System::fetch_mesh_vertex_only(float *vertex)
-{
-    return manager->active_submaps[renderIdx]->fetch_mesh_vertex_only(vertex);
-}
-
-size_t System::fetch_mesh_with_normal(float *vertex, float *normal)
-{
-    return manager->active_submaps[renderIdx]->fetch_mesh_with_normal(vertex, normal);
-}
-
-size_t System::fetch_mesh_with_colour(float *vertex, unsigned char *colour)
-{
-    return manager->active_submaps[renderIdx]->fetch_mesh_with_colour(vertex, colour);
-}
-
-void System::fetch_key_points(float *points, size_t &count, size_t max)
-{
-    manager->GetPoints(points, count, max);
-}
-
-void System::fetch_key_points_with_normal(float *points, float *normal, size_t &max_size)
-{
-}
-
-void System::writeMapToDisk(std::string file_name) const
-{
-    // mapping->writeMapToDisk(file_name);
-    manager->active_submaps[0]->writeMapToDisk(file_name);
-}
-
-void System::readMapFromDisk(std::string file_name)
-{
-    std::cout << "Reading map from " << file_name << std::endl;
-    manager->active_submaps[0]->readMapFromDisk(file_name);
-}
-
-Eigen::Matrix4f System::get_camera_pose() const
-{
-    // Eigen::Matrix4f Tmf, Twm; 
-    Eigen::Matrix4f T;
-    if (odometry->get_reference_image(renderIdx))
-    {
-        // final display map is primary submap centered.
-        T = odometry->get_reference_image(renderIdx)->get_reference_frame()->pose.cast<float>().matrix();
-        // Twm = manager->active_submaps[renderIdx]->poseGlobal.cast<float>().matrix();
-        // T = Twm * Tmf;
-    }
-    return T;
-}
 std::vector<Eigen::Matrix<float, 4, 4>> System::getKeyFramePoses() const
 {
     return manager->GetKFPoses();
@@ -1090,5 +1099,6 @@ void System::set_frame_id(size_t id)
     frame_id = id;
     frame_start_reloc_id = id;
 }
+*/
 
 } // namespace fusion
