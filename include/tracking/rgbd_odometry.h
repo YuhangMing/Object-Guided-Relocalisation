@@ -20,7 +20,7 @@ class DenseMapping;
 class DenseOdometry
 {
 public:
-  DenseOdometry(const fusion::IntrinsicMatrix base, int NUM_PYR);
+  DenseOdometry();
   DenseOdometry(const DenseOdometry &) = delete;
   DenseOdometry &operator=(const DenseOdometry &) = delete;
 
@@ -53,12 +53,11 @@ public:
   // void SetDetector(semantic::MaskRCNN * pDetector);
 
 private:
-  std::vector<Eigen::Matrix3f> vK;
+  std::vector<Eigen::Matrix3f> vK, vKInv;
 
   // std::shared_ptr<RgbdFrame> lastTracedFrame;         // consider change this to vector
   std::shared_ptr<DeviceImage> currDeviceMapPyramid;
   // std::shared_ptr<DeviceImage> refDeviceMapPyramid;   // consider change this to vector
-  std::vector<fusion::IntrinsicMatrix> cam_params;
   std::unique_ptr<DenseTracking> tracker;
   bool initialized;
 

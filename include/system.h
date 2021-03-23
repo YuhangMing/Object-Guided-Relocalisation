@@ -4,7 +4,6 @@
 #include <thread>
 #include <eigen3/Eigen/Core>
 #include <opencv2/opencv.hpp>
-#include "data_struct/intrinsic_matrix.h"
 #include "data_struct/rgbd_frame.h"
 #include "voxel_hashing/voxel_hashing.h"
 #include "tracking/rgbd_odometry.h"
@@ -23,8 +22,8 @@ class System
 {
 public:
     ~System();
-    System(const fusion::IntrinsicMatrix base, const int NUM_PYR, bool bSemantic=true, bool bLoadSMap=false);
-    void process_images(const cv::Mat depth, const cv::Mat image, const fusion::IntrinsicMatrix base, 
+    System(bool bSemantic=true, bool bLoadSMap=false);
+    void process_images(const cv::Mat depth, const cv::Mat image, 
                         bool bSubmapping, bool bSemantic, bool bRecordSequence);
     
     /* Semantic & Reloc disabled for now.

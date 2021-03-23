@@ -10,7 +10,7 @@ namespace fusion
 
 class Optimizer;
 
-Relocalizer::Relocalizer(const fusion::IntrinsicMatrix K) : cam_param(K)
+Relocalizer::Relocalizer(const Eigen::Matrix3f intrinsic_inv) : KInv(intrinsic_inv)
 {
     label_pose.push_back(3);
     label_pose.push_back(5);
@@ -33,7 +33,7 @@ void Relocalizer::compute_pose_candidates(std::vector<Sophus::SE3d> &candidates)
 
     // cv::cuda::GpuMat depth(target_frame->depth);
     // cv::cuda::GpuMat vmap_gpu, nmap_gpu;
-    // backProjectDepth(depth, vmap_gpu, cam_param);
+    // backProjectDepth(depth, vmap_gpu, KInv);
     // computeNMap(vmap_gpu, nmap_gpu);
 
     // extractor->extract_features_surf(

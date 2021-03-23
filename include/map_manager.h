@@ -20,10 +20,8 @@ class SubMapManager {
 public:
 	SubMapManager();
 
-	void Create(const fusion::IntrinsicMatrix base, 
-				int submapIdx, bool bTrack=false, bool bRender=false);
-	void Create(const fusion::IntrinsicMatrix base, 
-				int submapIdx, RgbdImagePtr ref_img, bool bTrack=false, bool bRender=true);
+	void Create(int submapIdx, bool bTrack=false, bool bRender=false);
+	void Create(int submapIdx, RgbdImagePtr ref_img, bool bTrack=false, bool bRender=true);
 
 	void ResetSubmaps();
 

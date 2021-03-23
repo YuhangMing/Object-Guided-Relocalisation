@@ -7,10 +7,13 @@ void SetCalibration()
     GlobalCfg.K(1, 1) = GlobalCfg.fy;
     GlobalCfg.K(0, 2) = GlobalCfg.cx;
     GlobalCfg.K(1, 2) = GlobalCfg.cy;
+
     GlobalCfg.invfx = 1.0 / GlobalCfg.fx;
     GlobalCfg.invfy = 1.0 / GlobalCfg.fy;
-
-    GlobalCfg.KInv = GlobalCfg.K.inverse();
+    GlobalCfg.KInv(0, 0) = GlobalCfg.invfx;
+    GlobalCfg.KInv(1, 1) = GlobalCfg.invfy;
+    GlobalCfg.KInv(0, 2) = GlobalCfg.cx;
+    GlobalCfg.KInv(1, 2) = GlobalCfg.cy;
 
     GlobalCfg.cvK = cv::Mat::eye(3, 3, CV_32F);
     GlobalCfg.cvK.at<float>(0, 0) = GlobalCfg.fx;

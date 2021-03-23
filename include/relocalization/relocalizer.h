@@ -3,7 +3,6 @@
 
 #include "data_struct/rgbd_frame.h"
 #include "data_struct/map_point.h"
-#include "data_struct/intrinsic_matrix.h"
 #include "data_struct/map_cuboid.h"
 #include "data_struct/map_object.h"
 
@@ -13,7 +12,7 @@ namespace fusion
 class Relocalizer
 {
 public:
-    Relocalizer(const fusion::IntrinsicMatrix K);
+    Relocalizer(const Eigen::Matrix3f intrinsic_inv);
     void set_target_frame(std::shared_ptr<RgbdFrame> frame);
     void compute_pose_candidates(std::vector<Sophus::SE3d> &candidates);
 
@@ -67,7 +66,7 @@ private:
     std::vector<int> label_pose, label_vec;
 
     std::shared_ptr<RgbdFrame> target_frame;
-    fusion::IntrinsicMatrix cam_param;
+    Eigen::Matrix3f KInv;
 
     // Initialize a Map of string & vector of int using initializer_list
     // this weight represents the relative size of objects

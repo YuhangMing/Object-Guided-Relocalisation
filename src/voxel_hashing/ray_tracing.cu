@@ -2,7 +2,6 @@
 #include "math/matrix_type.h"
 #include "math/vector_type.h"
 #include "utils/safe_call.h"
-#include "data_struct/intrinsic_matrix.h"
 #include "voxel_hashing/prefix_sum.h"
 #include <opencv2/opencv.hpp>
 
@@ -228,7 +227,7 @@ void create_rendering_blocks(
     cv::cuda::GpuMat &zrange_y,
     RenderingBlock *rendering_blocks,
     const Sophus::SE3d &frame_pose,
-    const IntrinsicMatrix cam_params)
+    const Eigen::Matrix3f K)
 {
     if (count_visible_block == 0)
         return;
@@ -251,10 +250,10 @@ void create_rendering_blocks(
     delegate.inv_pose = frame_pose.inverse().cast<float>().matrix3x4();
     delegate.zrange_x = zrange_x;
     delegate.zrange_y = zrange_y;
-    delegate.fx = cam_params.fx;
-    delegate.fy = cam_params.fy;
-    delegate.cx = cam_params.cx;
-    delegate.cy = cam_params.cy;
+    delegate.fx = K(0,0);
+    delegate.fy = K(1,1);
+    delegate.cx = K(0,2);
+    delegate.cy = K(1,2);
     delegate.visible_block_pos = visible_blocks;
     delegate.visible_block_count = count_visible_block;
     delegate.rendering_block_count = count_device;
@@ -604,7 +603,7 @@ void raycast(MapStorage map_struct,
              cv::cuda::GpuMat zrange_x,
              cv::cuda::GpuMat zrange_y,
              const Sophus::SE3d &pose,
-             const IntrinsicMatrix intrinsic_matrix)
+             const Eigen::Matrix3f KInv)
 {
     const int cols = vmap.cols;
     const int rows = vmap.rows;
@@ -618,10 +617,10 @@ void raycast(MapStorage map_struct,
     delegate.nmap = nmap;
     delegate.zrange_x = zrange_x;
     delegate.zrange_y = zrange_y;
-    delegate.invfx = intrinsic_matrix.invfx;
-    delegate.invfy = intrinsic_matrix.invfy;
-    delegate.cx = intrinsic_matrix.cx;
-    delegate.cy = intrinsic_matrix.cy;
+    delegate.invfx = KInv(0,0);
+    delegate.invfy = KInv(1,1);
+    delegate.cx = KInv(0,2);
+    delegate.cy = KInv(1,2);
     delegate.pose = pose.cast<float>().matrix3x4();
     delegate.inv_pose = pose.inverse().cast<float>().matrix3x4();
 
@@ -640,7 +639,7 @@ void raycast_with_colour(MapStorage map_struct,
                          cv::cuda::GpuMat zrange_x,
                          cv::cuda::GpuMat zrange_y,
                          const Sophus::SE3d &pose,
-                         const IntrinsicMatrix intrinsic_matrix)
+                         const Eigen::Matrix3f KInv)
 {
     const int cols = vmap.cols;
     const int rows = vmap.rows;
@@ -655,10 +654,10 @@ void raycast_with_colour(MapStorage map_struct,
     delegate.image = image;
     delegate.zrange_x = zrange_x;
     delegate.zrange_y = zrange_y;
-    delegate.invfx = intrinsic_matrix.invfx;
-    delegate.invfy = intrinsic_matrix.invfy;
-    delegate.cx = intrinsic_matrix.cx;
-    delegate.cy = intrinsic_matrix.cy;
+    delegate.invfx = KInv(0,0);
+    delegate.invfy = KInv(1,1);
+    delegate.cx = KInv(0,2);
+    delegate.cy = KInv(1,2);
     delegate.pose = pose.cast<float>().matrix3x4();
     delegate.inv_pose = pose.inverse().cast<float>().matrix3x4();
     delegate.valid_mask = false;
@@ -679,7 +678,7 @@ void raycast_with_object(MapStorage map_struct,
                          cv::cuda::GpuMat zrange_x,
                          cv::cuda::GpuMat zrange_y,
                          const Sophus::SE3d &pose,
-                         const IntrinsicMatrix intrinsic_matrix)
+                         const Eigen::Matrix3f KInv)
 {
     const int cols = vmap.cols;
     const int rows = vmap.rows;
@@ -696,10 +695,10 @@ void raycast_with_object(MapStorage map_struct,
     delegate.valid_mask = true;
     delegate.zrange_x = zrange_x;
     delegate.zrange_y = zrange_y;
-    delegate.invfx = intrinsic_matrix.invfx;
-    delegate.invfy = intrinsic_matrix.invfy;
-    delegate.cx = intrinsic_matrix.cx;
-    delegate.cy = intrinsic_matrix.cy;
+    delegate.invfx = KInv(0,0);
+    delegate.invfy = KInv(1,1);
+    delegate.cx = KInv(0,2);
+    delegate.cy = KInv(1,2);
     delegate.pose = pose.cast<float>().matrix3x4();
     delegate.inv_pose = pose.inverse().cast<float>().matrix3x4();
 
@@ -749,12 +748,13 @@ class VisibleEntryEvaluateFunctor
 {
 public:
     FUSION_HOST VisibleEntryEvaluateFunctor(
-        const IntrinsicMatrix K,
+        const int height, const int width,
+        const Eigen::Matrix3f K,
         const Matrix3x4f Tw2c)
-        : cols(K.width),
-          rows(K.height),
-          fx(K.fx), fy(K.fy),
-          cx(K.cx), cy(K.cy),
+        : cols(width),
+          rows(height),
+          fx(K(0,0)), fy(K(1,1)),
+          cx(K(0,2)), cy(K(1,2)),
           Tw2c(Tw2c)
     {
     }
@@ -845,13 +845,15 @@ private:
 void count_visible_entry(
     const MapStorage map_struct,
     const MapSize map_size,
-    const IntrinsicMatrix &K,
+    const int height,
+    const int width,
+    const Eigen::Matrix3f &K,
     const Sophus::SE3d frame_pose,
     HashEntry *const visible_entry,
     uint &visible_block_count)
 {
     visible_block_count = 0;
-    VisibleEntryEvaluateFunctor evaluator(K, frame_pose.cast<float>().matrix3x4());
+    VisibleEntryEvaluateFunctor evaluator(height, width, K, frame_pose.cast<float>().matrix3x4());
 
     uint *visible_count = NULL;
     safe_call(cudaMalloc((void **)&visible_count, sizeof(uint)));

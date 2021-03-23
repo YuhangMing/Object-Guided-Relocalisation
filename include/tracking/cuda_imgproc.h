@@ -3,7 +3,7 @@
 
 #include <sophus/se3.hpp>
 #include <opencv2/cudaarithm.hpp>
-#include "data_struct/intrinsic_matrix.h"
+#include "macros.h"
 
 namespace fusion
 {
@@ -13,7 +13,7 @@ FUSION_HOST void pyrDownDepth(const cv::cuda::GpuMat src, cv::cuda::GpuMat &dst)
 FUSION_HOST void pyrDownImage(const cv::cuda::GpuMat src, cv::cuda::GpuMat &dst);
 FUSION_HOST void pyrDownVMap(const cv::cuda::GpuMat src, cv::cuda::GpuMat &dst);
 FUSION_HOST void computeDerivative(const cv::cuda::GpuMat image, cv::cuda::GpuMat &dx, cv::cuda::GpuMat &dy);
-FUSION_HOST void backProjectDepth(const cv::cuda::GpuMat depth, cv::cuda::GpuMat &vmap, const IntrinsicMatrix &K);
+FUSION_HOST void backProjectDepth(const cv::cuda::GpuMat depth, cv::cuda::GpuMat &vmap, const Eigen::Matrix3f &KInv);
 FUSION_HOST void computeNMap(const cv::cuda::GpuMat vmap, cv::cuda::GpuMat &nmap);
 FUSION_HOST void renderScene(const cv::cuda::GpuMat vmap, const cv::cuda::GpuMat nmap, cv::cuda::GpuMat &image);
 FUSION_HOST void renderSceneTextured(const cv::cuda::GpuMat vmap, const cv::cuda::GpuMat nmap, const cv::cuda::GpuMat image, cv::cuda::GpuMat &out);
@@ -36,7 +36,7 @@ void warp_image(
     const cv::cuda::GpuMat src,
     const cv::cuda::GpuMat vmap_dst,
     const Sophus::SE3d pose,
-    const IntrinsicMatrix K,
+    const Eigen::Matrix3f K,
     cv::cuda::GpuMat &dst);
 
 } // namespace fusion

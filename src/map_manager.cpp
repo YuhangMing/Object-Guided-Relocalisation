@@ -1,5 +1,6 @@
 #include "map_manager.h"
 #include "data_struct/map_cuboid.h"
+#include "utils/settings.h"
 #include <ctime>
 
 namespace fusion
@@ -9,12 +10,12 @@ SubMapManager::SubMapManager() : bKFCreated(false) {
 	ResetSubmaps();
 }
 
-void SubMapManager::Create(const fusion::IntrinsicMatrix base, 
-						   int submapIdx, bool bTrack, bool bRender)
+void SubMapManager::Create(int submapIdx, bool bTrack, bool bRender)
 {
 	std::cout << "Create submap no. " << submapIdx << std::endl;
 
-	auto submap = std::make_shared<DenseMapping>(base, submapIdx, bTrack, bRender);
+	auto submap = std::make_shared<DenseMapping>(GlobalCfg.K, GlobalCfg.width, GlobalCfg.height,
+												 submapIdx, bTrack, bRender);
 	submap->poseGlobal = Sophus::SE3d();	// set to identity
 	active_submaps.push_back(submap);
 
@@ -23,14 +24,14 @@ void SubMapManager::Create(const fusion::IntrinsicMatrix base,
 	ref_frame_id = 0;
 }
 
-void SubMapManager::Create(const fusion::IntrinsicMatrix base, 
-						   int submapIdx, RgbdImagePtr ref_img, bool bTrack, bool bRender)
+void SubMapManager::Create(int submapIdx, RgbdImagePtr ref_img, bool bTrack, bool bRender)
 {
 	std::cout << "Create submap no. " << submapIdx << std::endl;
 
 	auto ref_frame = ref_img->get_reference_frame();
 	// create new submap
-	auto submap = std::make_shared<DenseMapping>(base, submapIdx, bTrack, bRender);
+	auto submap = std::make_shared<DenseMapping>(GlobalCfg.K, GlobalCfg.width, GlobalCfg.height,
+												 submapIdx, bTrack, bRender);
 	submap->poseGlobal = active_submaps[renderIdx]->poseGlobal * ref_frame->pose;
 	// store new submap
 	active_submaps.push_back(submap);
@@ -38,7 +39,7 @@ void SubMapManager::Create(const fusion::IntrinsicMatrix base,
 	active_submaps[renderIdx]->bRender = false;
 
 	// create new model frame for tracking and rendering
-	auto model_i = std::make_shared<DeviceImage>(base, ref_img->NUM_PYRS);
+	auto model_i = std::make_shared<DeviceImage>(ref_img->vKInv);
 	copyDeviceImage(ref_img, model_i);
 	auto model_f = model_i->get_reference_frame();	// new frame created when perform copy above, new pointer here
 	model_f->pose = Sophus::SE3d();	// every new submap starts its own reference coordinate system

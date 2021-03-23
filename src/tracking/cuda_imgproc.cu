@@ -4,7 +4,6 @@
 #include "utils/safe_call.h"
 #include "math/matrix_type.h"
 #include "math/vector_type.h"
-#include "data_struct/intrinsic_matrix.h"
 
 namespace fusion
 {
@@ -164,7 +163,7 @@ FUSION_DEVICE inline Vector3c interpolate_bilinear(const cv::cuda::PtrStepSz<Vec
 __global__ void warp_image_kernel(const cv::cuda::PtrStepSz<Vector3c> src,
                                   const cv::cuda::PtrStep<Vector4f> vmap_dst,
                                   const Matrix3x4f pose,
-                                  const IntrinsicMatrix K,
+                                  const Eigen::Matrix3f K,
                                   cv::cuda::PtrStep<Vector3c> dst)
 {
     const int x = threadIdx.x + blockIdx.x * blockDim.x;
@@ -175,15 +174,15 @@ __global__ void warp_image_kernel(const cv::cuda::PtrStepSz<Vector3c> src,
     dst.ptr(y)[x] = Vector3c(0);
     Vector3f dst_pt_src = pose(ToVector3(vmap_dst.ptr(y)[x]));
 
-    float u = K.fx * dst_pt_src.x / dst_pt_src.z + K.cx;
-    float v = K.fy * dst_pt_src.y / dst_pt_src.z + K.cy;
+    float u = K(0,0) * dst_pt_src.x / dst_pt_src.z + K(0,2);
+    float v = K(1,1) * dst_pt_src.y / dst_pt_src.z + K(1,2);
     if (u >= 1 && v >= 1 && u < src.cols - 1 && v < src.rows - 1)
     {
         dst.ptr(y)[x] = interpolate_bilinear(src, u, v);
     }
 }
 
-void warp_image(const cv::cuda::GpuMat src, const cv::cuda::GpuMat vmap_dst, const Sophus::SE3d pose, const IntrinsicMatrix K, cv::cuda::GpuMat &dst)
+void warp_image(const cv::cuda::GpuMat src, const cv::cuda::GpuMat vmap_dst, const Sophus::SE3d pose, const Eigen::Matrix3f K, cv::cuda::GpuMat &dst)
 {
     if (dst.empty())
         dst.create(src.size(), src.type());
@@ -246,7 +245,7 @@ FUSION_HOST void computeDerivative(const cv::cuda::GpuMat image, cv::cuda::GpuMa
     computeDerivativeK<<<grid, block>>>(image, dx, dy);
 }
 
-__global__ void backProjectDepthK(const cv::cuda::PtrStepSz<float> depth, cv::cuda::PtrStep<Vector4f> vmap, IntrinsicMatrix intrinsics)
+__global__ void backProjectDepthK(const cv::cuda::PtrStepSz<float> depth, cv::cuda::PtrStep<Vector4f> vmap, Eigen::Matrix3f KInv)
 {
     const int x = threadIdx.x + blockDim.x * blockIdx.x;
     const int y = threadIdx.y + blockDim.y * blockIdx.y;
@@ -258,11 +257,11 @@ __global__ void backProjectDepthK(const cv::cuda::PtrStepSz<float> depth, cv::cu
     // z = (z == z) ? z : nanf("NAN");
     if (z > 0.3f && z < 5.0f)
     {
-        vmap.ptr(y)[x] = Vector4f(z * (x - intrinsics.cx) * intrinsics.invfx, z * (y - intrinsics.cy) * intrinsics.invfy, z, 1.0f);
+        vmap.ptr(y)[x] = Vector4f(z * (x - KInv(0,2)) * KInv(0,0), z * (y - KInv(1,2)) * KInv(1,1), z, 1.0f);
     }
 }
 
-FUSION_HOST void backProjectDepth(const cv::cuda::GpuMat depth, cv::cuda::GpuMat &vmap, const IntrinsicMatrix &K)
+FUSION_HOST void backProjectDepth(const cv::cuda::GpuMat depth, cv::cuda::GpuMat &vmap, const Eigen::Matrix3f &KInv)
 {
     if (vmap.empty())
         vmap.create(depth.size(), CV_32FC4);
@@ -270,7 +269,7 @@ FUSION_HOST void backProjectDepth(const cv::cuda::GpuMat depth, cv::cuda::GpuMat
     dim3 block(8, 8);
     dim3 grid = createGrid(block, depth.cols, depth.rows);
 
-    backProjectDepthK<<<grid, block>>>(depth, vmap, K);
+    backProjectDepthK<<<grid, block>>>(depth, vmap, KInv);
 }
 
 __global__ void computeNMapK(cv::cuda::PtrStepSz<Vector4f> vmap, cv::cuda::PtrStep<Vector4f> nmap)

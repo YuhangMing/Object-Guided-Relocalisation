@@ -29,20 +29,21 @@ class DenseTracking
 {
 public:
   DenseTracking();
-  DenseTracking(const IntrinsicMatrix K, const int NUM_PYR);
+  // DenseTracking(const IntrinsicMatrix K, const int NUM_PYR);
   TrackingResult compute_transform(const RgbdImagePtr reference, const RgbdImagePtr current, const TrackingContext &c);
   // TrackingResult compute_transform_depth_only(const RgbdImagePtr reference, const RgbdImagePtr current, const TrackingContext &c);
   // TrackingResult compute_transform_depth_centroids(const RgbdImagePtr reference, const RgbdImagePtr current, const TrackingContext &c);
 
   TrackingResult compute_transform(const TrackingContext &c);
   void swap_intensity_pyr();
-  void set_source_vmap(cv::cuda::GpuMat vmap);
-  void set_source_image(cv::cuda::GpuMat image);
-  void set_source_depth(cv::cuda::GpuMat depth_float);
-  void set_source_intensity(cv::cuda::GpuMat intensity);
-  void set_reference_image(cv::cuda::GpuMat image);
-  void set_reference_intensity(cv::cuda::GpuMat intensity);
-  void set_reference_vmap(cv::cuda::GpuMat vmap);
+  void set_source_image(cv::Mat img, const int num_pyr);
+  void set_source_intensity(cv::cuda::GpuMat intensity, const int num_pyr);
+  void set_source_depth(cv::Mat depth, const std::vector<Eigen::Matrix3f> KInv_pyr);
+  // void set_source_vmap(cv::cuda::GpuMat vmap);
+  void set_reference_image(cv::Mat img, const int num_pyr);
+  void set_reference_intensity(cv::cuda::GpuMat intensity, const int num_pyr);
+  void set_reference_depth(cv::Mat depth, const std::vector<Eigen::Matrix3f> KInv_pyr);
+  // void set_reference_vmap(cv::cuda::GpuMat vmap);
 
   cv::cuda::GpuMat get_vmap_src(const int &level = 0);
   cv::cuda::GpuMat get_nmap_src(const int &level = 0);
@@ -55,18 +56,17 @@ public:
   cv::cuda::GpuMat get_intensity_ref(const int &level = 0);
 
 private:
-  std::vector<cv::cuda::GpuMat> vmap_src_pyr;
-  std::vector<cv::cuda::GpuMat> nmap_src_pyr;
-  std::vector<cv::cuda::GpuMat> depth_src_pyr;
   std::vector<cv::cuda::GpuMat> intensity_src_pyr;
   std::vector<cv::cuda::GpuMat> intensity_dx_pyr;
   std::vector<cv::cuda::GpuMat> intensity_dy_pyr;
+  std::vector<cv::cuda::GpuMat> depth_src_pyr;
+  std::vector<cv::cuda::GpuMat> vmap_src_pyr;
+  std::vector<cv::cuda::GpuMat> nmap_src_pyr;
 
+  std::vector<cv::cuda::GpuMat> intensity_ref_pyr;
+  std::vector<cv::cuda::GpuMat> depth_ref_pyr;
   std::vector<cv::cuda::GpuMat> vmap_ref_pyr;
   std::vector<cv::cuda::GpuMat> nmap_ref_pyr;
-  std::vector<cv::cuda::GpuMat> intensity_ref_pyr;
-
-  std::vector<IntrinsicMatrix> cam_params;
 
   Eigen::Matrix<float, 6, 6> icp_hessian;
   Eigen::Matrix<float, 6, 6> rgb_hessian;

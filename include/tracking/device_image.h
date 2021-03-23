@@ -7,7 +7,6 @@
 #include <opencv2/opencv.hpp>
 // #include <opencv2/improc.hpp>
 #include <opencv2/cudaarithm.hpp>
-#include "data_struct/intrinsic_matrix.h"
 #include "data_struct/rgbd_frame.h"
 
 namespace fusion
@@ -20,7 +19,7 @@ class DeviceImage
 {
 public:
     DeviceImage() = default;
-    DeviceImage(const fusion::IntrinsicMatrix &K, const int NUM_PYRS_);
+    DeviceImage(const std::vector<Eigen::Matrix3f> vIntrinsicsInv);
     DeviceImage(const DeviceImage &);
     DeviceImage &operator=(DeviceImage);
     friend void swap(DeviceImage &first, DeviceImage &second);
@@ -51,7 +50,7 @@ public:
     void create_vmap_pyramid(const int max_level); // TODO
     void create_nmap_pyramid(const int max_level); // TODO
 
-    int NUM_PYRS;
+    // int NUM_PYRS;
 
     // data structure for maskRCNN detection results
     void upload_semantics(const std::shared_ptr<RgbdFrame> frame);
@@ -63,6 +62,8 @@ public:
     // !!!!! COMMENT this line out later
     cv::cuda::GpuMat get_rendered_image_raw();
 
+
+    std::vector<Eigen::Matrix3f> vKInv;
 private:
     RgbdFramePtr reference_frame;
 
@@ -98,7 +99,7 @@ private:
     cv::cuda::GpuMat rendered_image_textured;
     cv::cuda::GpuMat rendered_image_raw;
 
-    std::vector<fusion::IntrinsicMatrix> cam_params;
+    // std::vector<fusion::IntrinsicMatrix> cam_params;
 
     // data structure for maskRCNN detection results
     cv::cuda::GpuMat detected_masks;    // DeviceArray2D<unsigned char> detected_masks;

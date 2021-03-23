@@ -4,20 +4,20 @@
 #include <sophus/se3.hpp>
 #include <opencv2/cudaarithm.hpp>
 #include "data_struct/map_struct.h"
-#include "data_struct/intrinsic_matrix.h"
 
 namespace fusion
 {
 namespace cuda
 {
 
+//- Map Fusion
 void update(
     MapStorage map_struct,
     MapState state,
     const cv::cuda::GpuMat depth,
     const cv::cuda::GpuMat image,
     const Sophus::SE3d &frame_pose,
-    const IntrinsicMatrix K,
+    const Eigen::Matrix3f K,
     cv::cuda::GpuMat &cv_flag,
     cv::cuda::GpuMat &cv_pos_array,
     HashEntry *visible_blocks,
@@ -30,18 +30,30 @@ void update_weighted(
     const cv::cuda::GpuMat normal,
     const cv::cuda::GpuMat image,
     const Sophus::SE3d &frame_pose,
-    const IntrinsicMatrix K,
+    const Eigen::Matrix3f K,
     cv::cuda::GpuMat &cv_flag,
     cv::cuda::GpuMat &cv_pos_array,
     HashEntry *visible_blocks,
     uint &visible_block_count);
+
+void create_new_block(
+    MapStorage map_struct,
+    MapState state,
+    const cv::cuda::GpuMat depth,
+    const Sophus::SE3d &frame_pose,
+    const Eigen::Matrix3f K,
+    cv::cuda::GpuMat &cv_flag,
+    cv::cuda::GpuMat &cv_pos_array,
+    HashEntry *visible_blocks,
+    uint &visible_block_count
+);
 
 void check_visibility(
     MapStorage map_struct,
     MapState state,
     const cv::cuda::GpuMat depth,
     const Sophus::SE3d &frame_pose,
-    const IntrinsicMatrix K,
+    const Eigen::Matrix3f K,
     cv::cuda::GpuMat &cv_flag,
     cv::cuda::GpuMat &cv_pos_array,
     HashEntry *visible_blocks,
@@ -54,7 +66,7 @@ void color_objects(
     const cv::cuda::GpuMat image,
     const cv::cuda::GpuMat mask,
     const Sophus::SE3d &frame_pose,
-    const IntrinsicMatrix K,
+    const Eigen::Matrix3f K,
     cv::cuda::GpuMat &cv_flag,
     cv::cuda::GpuMat &cv_pos_array,
     HashEntry *visible_blocks,
@@ -67,6 +79,8 @@ void color_objects(
 //     const unsigned char label,
 //     cv::cuda::GpuMat &cuboid);
 
+
+//- Ray Tracing
 void create_rendering_blocks(
     uint count_visible_block,
     uint &count_redering_block,
@@ -75,7 +89,7 @@ void create_rendering_blocks(
     cv::cuda::GpuMat &zrange_y,
     RenderingBlock *rendering_blocks,
     const Sophus::SE3d &frame_pose,
-    const IntrinsicMatrix cam_params);
+    const Eigen::Matrix3f K);
 
 void raycast(
     MapStorage map_struct,
@@ -85,7 +99,7 @@ void raycast(
     cv::cuda::GpuMat zrange_x,
     cv::cuda::GpuMat zrange_y,
     const Sophus::SE3d &pose,
-    const IntrinsicMatrix intrinsic_matrix);
+    const Eigen::Matrix3f KInv);
 
 void raycast_with_colour(
     MapStorage map_struct,
@@ -96,7 +110,7 @@ void raycast_with_colour(
     cv::cuda::GpuMat zrange_x,
     cv::cuda::GpuMat zrange_y,
     const Sophus::SE3d &pose,
-    const IntrinsicMatrix intrinsic_matrix);
+    const Eigen::Matrix3f KInv);
 void raycast_with_object(
     MapStorage map_struct,
     MapState state,
@@ -107,8 +121,19 @@ void raycast_with_object(
     cv::cuda::GpuMat zrange_x,
     cv::cuda::GpuMat zrange_y,
     const Sophus::SE3d &pose,
-    const IntrinsicMatrix intrinsic_matrix);
+    const Eigen::Matrix3f KInv);
 
+void count_visible_entry(
+    const MapStorage map_struct,
+    const MapSize map_size,
+    const int height,
+    const int width,
+    const Eigen::Matrix3f &K,
+    const Sophus::SE3d frame_pose,
+    HashEntry *const visible_entry,
+    uint &visible_block_count);
+
+//- Meshing
 void create_mesh_vertex_only(
     MapStorage map_struct,
     MapState state,
@@ -134,26 +159,6 @@ void create_mesh_with_colour(
     uint &triangle_count,
     void *vertex_data,
     void *vertex_colour);
-
-void count_visible_entry(
-    const MapStorage map_struct,
-    const MapSize map_size,
-    const IntrinsicMatrix &K,
-    const Sophus::SE3d frame_pose,
-    HashEntry *const visible_entry,
-    uint &visible_block_count);
-
-void create_new_block(
-    MapStorage map_struct,
-    MapState state,
-    const cv::cuda::GpuMat depth,
-    const Sophus::SE3d &frame_pose,
-    const IntrinsicMatrix K,
-    cv::cuda::GpuMat &cv_flag,
-    cv::cuda::GpuMat &cv_pos_array,
-    HashEntry *visible_blocks,
-    uint &visible_block_count
-);
 
 } // namespace cuda
 } // namespace fusion

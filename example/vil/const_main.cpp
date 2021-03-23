@@ -22,10 +22,8 @@ int main(int argc, char **argv)
             << std::endl;
 
     SetCalibration();
-	fusion::IntrinsicMatrix K(GlobalCfg.width, GlobalCfg.height, GlobalCfg.fx, 
-                            GlobalCfg.fy, GlobalCfg.cx, GlobalCfg.cy);
     
-    fusion::System slam(K, GlobalCfg.maxPyramidLevel, GlobalCfg.bSemantic);
+    fusion::System slam(GlobalCfg.bSemantic);
 
     image_counter = 0;
     cv::Mat image, depth;
@@ -40,7 +38,7 @@ int main(int argc, char **argv)
                 window.SetRGBSource(image);
                 window.SetDepthSource(depth);   // raw depth
                 // std::clock_t start = std::clock();
-                slam.process_images(depth, image, K, 
+                slam.process_images(depth, image,
                         GlobalCfg.bSubmapping, GlobalCfg.bSemantic, GlobalCfg.bRecord);
                 // std::cout << "## Processing an image takes "
                     //     << ( std::clock() - start ) / (double) CLOCKS_PER_SEC 
@@ -76,7 +74,7 @@ int main(int argc, char **argv)
     else
     {
         while(load_next_image_vil_sequence(depth, image, img_path)){        
-            slam.process_images(depth, image, K, 
+            slam.process_images(depth, image,
                     GlobalCfg.bSubmapping, GlobalCfg.bSemantic, GlobalCfg.bRecord);
         }
         // slam.writeMapToDisk("map-"+folder+"0"+std::to_string(sequence_id)+".data");

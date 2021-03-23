@@ -555,7 +555,7 @@ void update(
     const cv::cuda::GpuMat depth,
     const cv::cuda::GpuMat image,
     const Sophus::SE3d &frame_pose,
-    const IntrinsicMatrix K,
+    const Eigen::Matrix3f K,
     cv::cuda::GpuMat &cv_flag,
     cv::cuda::GpuMat &cv_pos_array,
     HashEntry *visible_blocks,
@@ -578,9 +578,9 @@ void update(
     create_blocks_kernel<<<block, thread>>>(
         map_struct,
         depth,
-        K.invfx,
-        K.invfy,
-        K.cx, K.cy,
+        1.0/K(0,0),
+        1.0/K(1,1),
+        K(0,2), K(1,2),
         frame_pose.cast<float>().matrix3x4(),
         flag.get());
 
@@ -592,8 +592,8 @@ void update(
         flag.get(),
         frame_pose.inverse().cast<float>().matrix3x4(),
         cols, rows,
-        K.fx, K.fy,
-        K.cx, K.cy);
+        K(0,0), K(1,1),
+        K(0,2), K(1,2));
 
     thrust::exclusive_scan(flag, flag + state.num_total_hash_entries_, pos_array);
 
@@ -617,8 +617,8 @@ void update(
         visible_block_count,
         depth, image,
         frame_pose.inverse().cast<float>().matrix3x4(),
-        K.fx, K.fy,
-        K.cx, K.cy);
+        K(0,0), K(1,1),
+        K(0,2), K(1,2));
 }
 
 // MAIN FUSING FUNCTION
@@ -629,7 +629,7 @@ void update_weighted(
     const cv::cuda::GpuMat normal,
     const cv::cuda::GpuMat image,
     const Sophus::SE3d &frame_pose,
-    const IntrinsicMatrix K,
+    const Eigen::Matrix3f K,
     cv::cuda::GpuMat &cv_flag,
     cv::cuda::GpuMat &cv_pos_array,
     HashEntry *visible_blocks,
@@ -652,9 +652,9 @@ void update_weighted(
     create_blocks_kernel<<<block, thread>>>(
         map_struct,
         depth,
-        K.invfx,
-        K.invfy,
-        K.cx, K.cy,
+        1.0/K(0,0),
+        1.0/K(1,1),
+        K(0,2), K(1,2),
         frame_pose.cast<float>().matrix3x4(),
         flag.get());
     cudaDeviceSynchronize();
@@ -668,8 +668,8 @@ void update_weighted(
         flag.get(),
         frame_pose.inverse().cast<float>().matrix3x4(),
         cols, rows,
-        K.fx, K.fy,
-        K.cx, K.cy);
+        K(0,0), K(1,1),
+        K(0,2), K(1,2));
     cudaDeviceSynchronize();
     safe_call(cudaGetLastError());
 
@@ -699,8 +699,8 @@ void update_weighted(
         normal,
         image,
         frame_pose.inverse().cast<float>().matrix3x4(),
-        K.fx, K.fy,
-        K.cx, K.cy);
+        K(0,0), K(1,1),
+        K(0,2), K(1,2));
     cudaDeviceSynchronize();
     safe_call(cudaGetLastError());
 }
@@ -710,7 +710,7 @@ void create_new_block(
     MapState state,
     const cv::cuda::GpuMat depth,
     const Sophus::SE3d &frame_pose,
-    const IntrinsicMatrix K,
+    const Eigen::Matrix3f K,
     cv::cuda::GpuMat &cv_flag,
     cv::cuda::GpuMat &cv_pos_array,
     HashEntry *visible_blocks,
@@ -733,9 +733,9 @@ void create_new_block(
     create_blocks_kernel<<<block, thread>>>(
         map_struct,
         depth,
-        K.invfx,
-        K.invfy,
-        K.cx, K.cy,
+        1.0/K(0,0),
+        1.0/K(1,1),
+        K(0,2), K(1,2),
         frame_pose.cast<float>().matrix3x4(),
         flag.get());
     cudaDeviceSynchronize();
@@ -750,8 +750,8 @@ void create_new_block(
         flag.get(),
         frame_pose.inverse().cast<float>().matrix3x4(),
         cols, rows,
-        K.fx, K.fy,
-        K.cx, K.cy);
+        K(0,0), K(1,1),
+        K(0,2), K(1,2));
     cudaDeviceSynchronize();
     safe_call(cudaGetLastError());
     printf("checked visibility flag   ");
@@ -779,7 +779,7 @@ void check_visibility(
     MapState state,
     const cv::cuda::GpuMat depth,
     const Sophus::SE3d &frame_pose,
-    const IntrinsicMatrix K,
+    const Eigen::Matrix3f K,
     cv::cuda::GpuMat &cv_flag,
     cv::cuda::GpuMat &cv_pos_array,
     HashEntry *visible_blocks,
@@ -804,8 +804,8 @@ void check_visibility(
         flag.get(),
         frame_pose.inverse().cast<float>().matrix3x4(),
         cols, rows,
-        K.fx, K.fy,
-        K.cx, K.cy);
+        K(0,0), K(1,1),
+        K(0,2), K(1,2));
     cudaDeviceSynchronize();
     safe_call(cudaGetLastError());
 
@@ -829,7 +829,7 @@ void color_objects(
     const cv::cuda::GpuMat image,
     const cv::cuda::GpuMat mask,
     const Sophus::SE3d &frame_pose,
-    const IntrinsicMatrix K,
+    const Eigen::Matrix3f K,
     cv::cuda::GpuMat &cv_flag,
     cv::cuda::GpuMat &cv_pos_array,
     HashEntry *visible_blocks,
@@ -856,8 +856,8 @@ void color_objects(
         flag.get(),
         frame_pose.inverse().cast<float>().matrix3x4(),
         cols, rows,
-        K.fx, K.fy,
-        K.cx, K.cy);
+        K(0,0), K(1,1),
+        K(0,2), K(1,2));
 
     thrust::exclusive_scan(flag, flag + state.num_total_hash_entries_, pos_array);
 
@@ -883,8 +883,8 @@ void color_objects(
         image,
         mask,
         frame_pose.inverse().cast<float>().matrix3x4(),
-        K.fx, K.fy,
-        K.cx, K.cy);
+        K(0,0), K(1,1),
+        K(0,2), K(1,2));
 }
 
 // __global__ void update_cuboids_dimension_kernel(

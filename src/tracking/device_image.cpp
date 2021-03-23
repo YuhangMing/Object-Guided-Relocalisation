@@ -5,10 +5,10 @@
 namespace fusion
 {
 
-DeviceImage::DeviceImage(const fusion::IntrinsicMatrix &K, const int NUM_PYRS_)
+DeviceImage::DeviceImage(const std::vector<Eigen::Matrix3f> vIntrinsicsInv)
 {
-    fusion::BuildIntrinsicPyramid(K, cam_params, NUM_PYRS_);
-    NUM_PYRS = NUM_PYRS_;
+    vKInv = vIntrinsicsInv;
+    // NUM_PYRS = vKInv.size();
 }
 
 DeviceImage::DeviceImage(const DeviceImage &other)
@@ -20,7 +20,7 @@ DeviceImage::DeviceImage(const DeviceImage &other)
     vmap_pyr = other.vmap_pyr;
     nmap_pyr = other.nmap_pyr;
     semi_dense_image = other.semi_dense_image;
-    cam_params = other.cam_params;
+    vKInv = other.vKInv;
     image = other.image;
     image_float = other.image_float;
     depth_float = other.depth_float;
@@ -219,7 +219,7 @@ void DeviceImage::upload(const std::shared_ptr<RgbdFrame> frame)
     }
     // std::cout << "Uploading frame" << std::endl;
 
-    const int max_level = cam_params.size();
+    const int max_level = vKInv.size();
 
     if (max_level != this->depth_pyr.size())
         resize_pyramid(max_level);
@@ -244,7 +244,7 @@ void DeviceImage::upload(const std::shared_ptr<RgbdFrame> frame)
     for (int i = 0; i < max_level; ++i)
     {
         computeDerivative(intensity_pyr[i], intensity_dx_pyr[i], intensity_dy_pyr[i]);
-        backProjectDepth(depth_pyr[i], vmap_pyr[i], cam_params[i]);
+        backProjectDepth(depth_pyr[i], vmap_pyr[i], vKInv[i]);
         computeNMap(vmap_pyr[i], nmap_pyr[i]);
     }
 

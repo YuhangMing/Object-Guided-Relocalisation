@@ -30,13 +30,18 @@ FUSION_HOST void deviceRelease(void **dev_ptr)
   *dev_ptr = 0;
 }
 
-DenseMapping::DenseMapping(const IntrinsicMatrix &K, int idx, bool bTrack, bool bRender) 
-          : cam_params(K), submapIdx(idx), bTrack(bTrack), bRender(bRender)
+DenseMapping::DenseMapping(const Eigen::Matrix3f &intrinsics, const int width, const int height,
+                           int idx, bool bTrack, bool bRender) 
+          : submapIdx(idx), bTrack(bTrack), bRender(bRender)
 {
   device_map.create();
-  zrange_x.create(cam_params.height / 8, cam_params.width / 8, CV_32FC1);
-  zrange_y.create(cam_params.height / 8, cam_params.width / 8, CV_32FC1);
-
+  zrange_x.create(height / 8, width / 8, CV_32FC1);
+  zrange_y.create(height / 8, width / 8, CV_32FC1);
+  K = intrinsics;
+  KInv = K;
+  KInv(0,0) = 1.0/KInv(0,0);
+  KInv(1,1) = 1.0/KInv(1,1);
+  
   visible_blocks = (HashEntry *)deviceMalloc(sizeof(HashEntry) * device_map.state.num_total_hash_entries_);
   rendering_blocks = (RenderingBlock *)deviceMalloc(sizeof(RenderingBlock) * 100000);
 
@@ -67,7 +72,7 @@ void DenseMapping::update(RgbdImagePtr frame)
       normal,
       image,
       pose,
-      cam_params,
+      K,
       flag,
       pos_array,
       visible_blocks,
@@ -87,7 +92,7 @@ void DenseMapping::update(
       depth,
       image,
       pose,
-      cam_params,
+      K,
       flag,
       pos_array,
       visible_blocks,
@@ -111,7 +116,7 @@ void DenseMapping::raycast(
       zrange_y,
       rendering_blocks,
       pose,
-      cam_params);
+      K);
 
   if (count_rendering_block != 0)
   {
@@ -126,7 +131,7 @@ void DenseMapping::raycast(
         zrange_x,
         zrange_y,
         pose,
-        cam_params);
+        KInv);
   }
 }
 // --Yohann
@@ -147,7 +152,7 @@ void DenseMapping::raycast(
       zrange_y,
       rendering_blocks,
       pose,
-      cam_params);
+      K);
 
   if (count_rendering_block != 0)
   {
@@ -161,7 +166,7 @@ void DenseMapping::raycast(
         zrange_x,
         zrange_y,
         pose,
-        cam_params);
+        KInv);
   }
 }
 void DenseMapping::create_blocks(RgbdImagePtr frame)
@@ -178,7 +183,7 @@ void DenseMapping::create_blocks(RgbdImagePtr frame)
       device_map.state,
       depth,
       pose,
-      cam_params,
+      K,
       flag,
       pos_array,
       visible_blocks,
@@ -199,7 +204,7 @@ void DenseMapping::check_visibility(RgbdImagePtr frame)
       device_map.state,
       depth,
       pose,
-      cam_params,
+      K,
       flag,
       pos_array,
       visible_blocks,
@@ -225,11 +230,237 @@ void DenseMapping::color_objects(RgbdImagePtr frame)
     image,
     mask,
     pose,
-    cam_params,
+    K,
     flag,
     pos_array,
     visible_blocks,
     count_visible_block);
+}
+
+void DenseMapping::raycast_check_visibility(
+    cv::cuda::GpuMat &vmap,
+    cv::cuda::GpuMat &image,
+    const Sophus::SE3d pose)
+{
+  fusion::cuda::count_visible_entry(
+      device_map.map,
+      device_map.size,
+      height,
+      width,
+      K,
+      pose.inverse(),
+      visible_blocks,
+      count_visible_block);
+
+  raycast(vmap, image, pose);
+}
+
+void DenseMapping::reset_mapping()
+{
+  device_map.reset();
+}
+
+size_t DenseMapping::fetch_mesh_vertex_only(void *vertex)
+{
+  uint count_triangle = 0;
+
+  cuda::create_mesh_vertex_only(
+      device_map.map,
+      device_map.state,
+      count_visible_block,
+      visible_blocks,
+      count_triangle,
+      vertex);
+
+  return (size_t)count_triangle;
+}
+
+size_t DenseMapping::fetch_mesh_with_normal(void *vertex, void *normal)
+{
+  uint count_triangle = 0;
+
+  cuda::create_mesh_with_normal(
+      device_map.map,
+      device_map.state,
+      count_visible_block,
+      visible_blocks,
+      count_triangle,
+      vertex,
+      normal);
+
+  return (size_t)count_triangle;
+}
+
+size_t DenseMapping::fetch_mesh_with_colour(void *vertex, void *colour)
+{
+  uint count_triangle = 0;
+
+  cuda::create_mesh_with_colour(
+      device_map.map,
+      device_map.state,
+      count_visible_block,
+      visible_blocks,
+      count_triangle,
+      vertex,
+      colour);
+
+  return (size_t)count_triangle;
+}
+
+void DenseMapping::writeMapToDisk(std::string file_name)
+{
+  // dense map
+  MapStruct<false> host_map;
+  host_map.create();
+  device_map.download(host_map);
+  host_map.writeToDisk(file_name);
+  host_map.release();
+  std::cout << "Dense map wrote to " << file_name << " and "
+            << file_name << ".txt" << std::endl;
+
+  // semantic map
+  std::ofstream semanticfile;
+  semanticfile.open(file_name+"-semantic.txt", std::ios::out);
+  if(semanticfile.is_open())
+  {
+    semanticfile << v_objects.size() << "\n";
+  }
+  semanticfile.close();
+  for(size_t i=0; i<v_objects.size(); ++i)
+  {
+    v_objects[i]->writeToFile(file_name);
+  }
+  std::cout << "Dense map wrote to " << file_name << "-semantic.txt" << std::endl;
+
+  // keyframes
+  std::ofstream kfsfile;
+  kfsfile.open(file_name+"-kfs.txt", std::ios::out);
+  if(kfsfile.is_open())
+  {
+    for(size_t i=0; i<vKFs.size(); ++i)
+    {
+      Eigen::Matrix4d tmp_kf = vKFs[i]->pose.matrix();
+      Eigen::Matrix3d rot = tmp_kf.topLeftCorner<3,3>();
+      Eigen::Vector3d trans = tmp_kf.topRightCorner<3,1>();
+      Eigen::Quaterniond quat(rot);
+
+      kfsfile << vKFs[i]->id << " "
+              << trans(0) << " " << trans(1) << " " << trans(2) << " "
+              << quat.x() << " " << quat.y() << " " << quat.z() << " " << quat.w()
+              << "\n";
+    }
+  }
+  kfsfile.close();
+  std::cout << "KeyFrames wrote to " << file_name << "-kfs.txt" << std::endl;
+}
+
+void DenseMapping::readMapFromDisk(std::string file_name)
+{
+  // dense map
+  MapStruct<false> host_map;
+  host_map.create();
+  host_map.readFromDisk(file_name);
+  device_map.upload(host_map);
+  host_map.release();
+
+  // semantic map
+  std::ifstream semanticfile(file_name+"-semantic.txt", std::ios::in);
+  int numObj;
+  if (semanticfile.is_open())
+  {
+    std::string sNumObj;
+    std::getline(semanticfile, sNumObj);
+    numObj = std::stoi(sNumObj);
+    std::cout << sNumObj + " objects in the map." << std::endl;
+  }
+  semanticfile.close();
+  v_objects.clear();
+  int start_line = 1;
+  for(size_t i=0; i<numObj; ++i)
+  {
+    std::shared_ptr<Object3d> new_object(new Object3d(file_name, start_line));
+    v_objects.push_back(std::move(new_object));
+    // start_line ++;
+  }
+  std::cout << "Primary objects list loaded." << std::endl;
+  // create back up dic from loaded objects
+  object_dictionary.clear();
+  for(size_t i=0; i<numObj; ++i){
+    std::shared_ptr<Object3d> one_object(new Object3d(v_objects[i]));
+    auto search = object_dictionary.find(one_object->label);
+    if(search==object_dictionary.end()){
+      std::vector<std::shared_ptr<Object3d>> instance_vec;
+      instance_vec.push_back(std::move(one_object));
+      object_dictionary.insert(std::make_pair(v_objects[i]->label, instance_vec));
+    } else {
+      search->second.push_back(std::move(one_object));
+    }
+  } // -i 
+  std::cout << "Backup objects dictionary loaded." << std::endl;
+  // TEST
+  // display observation counts for each instance
+  std::map<int, std::vector<std::shared_ptr<Object3d>>>::iterator it;
+  for(it=object_dictionary.begin(); it!=object_dictionary.end(); ++it)
+  {
+    std::cout << "Object " << it->first << " has " 
+              << it->second.size() << " instances detected: ";
+    for(size_t i=0; i<it->second.size(); ++i)
+    {
+      std::cout << it->second[i]->observation_count << " (";
+      for(size_t j=0; j<it->second[i]->v_all_cuboids.size(); ++j){
+        std::cout << it->second[i]->v_all_cuboids[j]->observation << " ";
+      }
+      std::cout << ") - ";
+    } 
+    std::cout << std::endl;
+  }
+
+  // keyframes
+  std::ifstream kfsfile(file_name+"-kfs.txt");
+  if(kfsfile.is_open())
+  {
+    std::string line;
+    while(std::getline(kfsfile, line))
+    {
+      std::istringstream ss(line);
+      double trans[3];
+      double qua[4];
+      for(size_t i=0; i<8; ++i){
+        double one_val;
+        ss >> one_val;
+        if(i == 0){
+          int kf_id = one_val;
+        }
+        else if(i < 4){
+          trans[i-1] = one_val;
+        } else {
+          qua[i-4] = one_val;
+        }
+      }
+      Eigen::Quaterniond q(qua);
+      Eigen::Vector3d t(trans[0], trans[1], trans[2]);
+      Eigen::Matrix4d T = Eigen::Matrix4d::Identity();
+      T.topLeftCorner(3,3) = q.toRotationMatrix();
+      T.topRightCorner(3,1) = t;
+      vKFposes.push_back(T.cast<float>());
+    }
+  }
+  kfsfile.close();
+}
+
+
+float DenseMapping::CheckVisPercent() {
+  // copy heap_mem_counter_ from device to host
+  int *remain = new int[1];
+  safe_call(cudaMemcpy(remain, device_map.map.heap_mem_counter_, sizeof(int), cudaMemcpyDeviceToHost));
+  int remain_relu = remain[0] > 0 ? remain[0] : 0;
+
+  visible_percent = float(count_visible_block) / (device_map.state.num_total_voxel_blocks_ - remain_relu);
+  // std::cout << visible_percent << ": " << count_visible_block << "/" 
+  //           << (device_map.state.num_total_voxel_blocks_ - remain_relu) << "/" 
+  //           << remain_relu << std::endl;
+
+  return visible_percent;
 }
 
 void DenseMapping::update_planes(RgbdFramePtr frame)
@@ -1306,229 +1537,5 @@ void DenseMapping::update_objects(RgbdFramePtr frame)
   //   }
   // } // loop for # of detections
 // }
-
-void DenseMapping::raycast_check_visibility(
-    cv::cuda::GpuMat &vmap,
-    cv::cuda::GpuMat &image,
-    const Sophus::SE3d pose)
-{
-  fusion::cuda::count_visible_entry(
-      device_map.map,
-      device_map.size,
-      cam_params,
-      pose.inverse(),
-      visible_blocks,
-      count_visible_block);
-
-  raycast(vmap, image, pose);
-}
-
-void DenseMapping::reset_mapping()
-{
-  device_map.reset();
-}
-
-size_t DenseMapping::fetch_mesh_vertex_only(void *vertex)
-{
-  uint count_triangle = 0;
-
-  cuda::create_mesh_vertex_only(
-      device_map.map,
-      device_map.state,
-      count_visible_block,
-      visible_blocks,
-      count_triangle,
-      vertex);
-
-  return (size_t)count_triangle;
-}
-
-size_t DenseMapping::fetch_mesh_with_normal(void *vertex, void *normal)
-{
-  uint count_triangle = 0;
-
-  cuda::create_mesh_with_normal(
-      device_map.map,
-      device_map.state,
-      count_visible_block,
-      visible_blocks,
-      count_triangle,
-      vertex,
-      normal);
-
-  return (size_t)count_triangle;
-}
-
-size_t DenseMapping::fetch_mesh_with_colour(void *vertex, void *colour)
-{
-  uint count_triangle = 0;
-
-  cuda::create_mesh_with_colour(
-      device_map.map,
-      device_map.state,
-      count_visible_block,
-      visible_blocks,
-      count_triangle,
-      vertex,
-      colour);
-
-  return (size_t)count_triangle;
-}
-
-void DenseMapping::writeMapToDisk(std::string file_name)
-{
-  // dense map
-  MapStruct<false> host_map;
-  host_map.create();
-  device_map.download(host_map);
-  host_map.writeToDisk(file_name);
-  host_map.release();
-  std::cout << "Dense map wrote to " << file_name << " and "
-            << file_name << ".txt" << std::endl;
-
-  // semantic map
-  std::ofstream semanticfile;
-  semanticfile.open(file_name+"-semantic.txt", std::ios::out);
-  if(semanticfile.is_open())
-  {
-    semanticfile << v_objects.size() << "\n";
-  }
-  semanticfile.close();
-  for(size_t i=0; i<v_objects.size(); ++i)
-  {
-    v_objects[i]->writeToFile(file_name);
-  }
-  std::cout << "Dense map wrote to " << file_name << "-semantic.txt" << std::endl;
-
-  // keyframes
-  std::ofstream kfsfile;
-  kfsfile.open(file_name+"-kfs.txt", std::ios::out);
-  if(kfsfile.is_open())
-  {
-    for(size_t i=0; i<vKFs.size(); ++i)
-    {
-      Eigen::Matrix4d tmp_kf = vKFs[i]->pose.matrix();
-      Eigen::Matrix3d rot = tmp_kf.topLeftCorner<3,3>();
-      Eigen::Vector3d trans = tmp_kf.topRightCorner<3,1>();
-      Eigen::Quaterniond quat(rot);
-
-      kfsfile << vKFs[i]->id << " "
-              << trans(0) << " " << trans(1) << " " << trans(2) << " "
-              << quat.x() << " " << quat.y() << " " << quat.z() << " " << quat.w()
-              << "\n";
-    }
-  }
-  kfsfile.close();
-  std::cout << "KeyFrames wrote to " << file_name << "-kfs.txt" << std::endl;
-}
-
-void DenseMapping::readMapFromDisk(std::string file_name)
-{
-  // dense map
-  MapStruct<false> host_map;
-  host_map.create();
-  host_map.readFromDisk(file_name);
-  device_map.upload(host_map);
-  host_map.release();
-
-  // semantic map
-  std::ifstream semanticfile(file_name+"-semantic.txt", std::ios::in);
-  int numObj;
-  if (semanticfile.is_open())
-  {
-    std::string sNumObj;
-    std::getline(semanticfile, sNumObj);
-    numObj = std::stoi(sNumObj);
-    std::cout << sNumObj + " objects in the map." << std::endl;
-  }
-  semanticfile.close();
-  v_objects.clear();
-  int start_line = 1;
-  for(size_t i=0; i<numObj; ++i)
-  {
-    std::shared_ptr<Object3d> new_object(new Object3d(file_name, start_line));
-    v_objects.push_back(std::move(new_object));
-    // start_line ++;
-  }
-  std::cout << "Primary objects list loaded." << std::endl;
-  // create back up dic from loaded objects
-  object_dictionary.clear();
-  for(size_t i=0; i<numObj; ++i){
-    std::shared_ptr<Object3d> one_object(new Object3d(v_objects[i]));
-    auto search = object_dictionary.find(one_object->label);
-    if(search==object_dictionary.end()){
-      std::vector<std::shared_ptr<Object3d>> instance_vec;
-      instance_vec.push_back(std::move(one_object));
-      object_dictionary.insert(std::make_pair(v_objects[i]->label, instance_vec));
-    } else {
-      search->second.push_back(std::move(one_object));
-    }
-  } // -i 
-  std::cout << "Backup objects dictionary loaded." << std::endl;
-  // TEST
-  // display observation counts for each instance
-  std::map<int, std::vector<std::shared_ptr<Object3d>>>::iterator it;
-  for(it=object_dictionary.begin(); it!=object_dictionary.end(); ++it)
-  {
-    std::cout << "Object " << it->first << " has " 
-              << it->second.size() << " instances detected: ";
-    for(size_t i=0; i<it->second.size(); ++i)
-    {
-      std::cout << it->second[i]->observation_count << " (";
-      for(size_t j=0; j<it->second[i]->v_all_cuboids.size(); ++j){
-        std::cout << it->second[i]->v_all_cuboids[j]->observation << " ";
-      }
-      std::cout << ") - ";
-    } 
-    std::cout << std::endl;
-  }
-
-  // keyframes
-  std::ifstream kfsfile(file_name+"-kfs.txt");
-  if(kfsfile.is_open())
-  {
-    std::string line;
-    while(std::getline(kfsfile, line))
-    {
-      std::istringstream ss(line);
-      double trans[3];
-      double qua[4];
-      for(size_t i=0; i<8; ++i){
-        double one_val;
-        ss >> one_val;
-        if(i == 0){
-          int kf_id = one_val;
-        }
-        else if(i < 4){
-          trans[i-1] = one_val;
-        } else {
-          qua[i-4] = one_val;
-        }
-      }
-      Eigen::Quaterniond q(qua);
-      Eigen::Vector3d t(trans[0], trans[1], trans[2]);
-      Eigen::Matrix4d T = Eigen::Matrix4d::Identity();
-      T.topLeftCorner(3,3) = q.toRotationMatrix();
-      T.topRightCorner(3,1) = t;
-      vKFposes.push_back(T.cast<float>());
-    }
-  }
-  kfsfile.close();
-}
-
-
-float DenseMapping::CheckVisPercent() {
-  // copy heap_mem_counter_ from device to host
-  int *remain = new int[1];
-  safe_call(cudaMemcpy(remain, device_map.map.heap_mem_counter_, sizeof(int), cudaMemcpyDeviceToHost));
-  int remain_relu = remain[0] > 0 ? remain[0] : 0;
-
-  visible_percent = float(count_visible_block) / (device_map.state.num_total_voxel_blocks_ - remain_relu);
-  // std::cout << visible_percent << ": " << count_visible_block << "/" 
-  //           << (device_map.state.num_total_voxel_blocks_ - remain_relu) << "/" 
-  //           << remain_relu << std::endl;
-
-  return visible_percent;
-}
 
 } // namespace fusion

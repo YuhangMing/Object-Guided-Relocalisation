@@ -16,7 +16,8 @@ class DenseMapping
 {
 public:
   ~DenseMapping();
-  DenseMapping(const fusion::IntrinsicMatrix &K, int idx, bool bTrack, bool bRender);
+  DenseMapping(const Eigen::Matrix3f &K, const int width, const int height,
+               int idx, bool bTrack, bool bRender);
 
   void update(RgbdImagePtr frame);
   void update(cv::cuda::GpuMat depth, cv::cuda::GpuMat image, const Sophus::SE3d pose);
@@ -68,7 +69,8 @@ public:
   // void estimate_quadrics(RgbdFramePtr frame, bool tracking_lost);
 
 private:
-  IntrinsicMatrix cam_params;
+  Eigen::Matrix3f K, KInv;
+  int width, height;
   MapStruct<true> device_map;
 
   // for map udate

@@ -24,13 +24,11 @@ System::~System()
     // delete detector;
 }
 
-System::System(const fusion::IntrinsicMatrix base, const int NUM_PYR, bool bSemantic, bool bLoadSMap)
+System::System(bool bSemantic, bool bLoadSMap)
     : frame_id(0), reloc_frame_id(0), frame_start_reloc_id(0), is_initialized(false), hasNewKeyFrame(false), b_reloc_attp(false)
 {
-    
-    // mapping = std::make_shared<DenseMapping>(base);
     safe_call(cudaGetLastError());
-    odometry = std::make_shared<DenseOdometry>(base, NUM_PYR);
+    odometry = std::make_shared<DenseOdometry>();
 
     #ifdef CUDA_MEM
         // inaccurate, the driver decides when to release the memory
@@ -41,7 +39,7 @@ System::System(const fusion::IntrinsicMatrix base, const int NUM_PYR, bool bSema
         free_1 = (uint)free_t0/1048576.0 ;
     #endif
     manager = std::make_shared<SubMapManager>();
-    manager->Create(base, 0, true, true);
+    manager->Create(0, true, true);
     // manager->SetTracker(odometry);
     odometry->SetManager(manager);
     #ifdef CUDA_MEM
@@ -54,11 +52,6 @@ System::System(const fusion::IntrinsicMatrix base, const int NUM_PYR, bool bSema
                 << free_2 << " MB free mem after" << std::endl 
                 << "   out of " << total_0 << " MB total memroy." << std::endl;
     #endif
-
-    // graph = std::make_shared<KeyFrameGraph>(base, NUM_PYR);
-    // graph->set_feature_extractor(extractor);
-    // graph->set_descriptor_matcher(matcher);
-    // graphThread = std::thread(&KeyFrameGraph::main_loop, graph.get());
 
     /* Semantic & Reloc disabled for now.
     relocalizer = std::make_shared<Relocalizer>(base);
@@ -160,7 +153,7 @@ void System::initialization()
     // pose_file.close();
 }
 
-void System::process_images(const cv::Mat depth, const cv::Mat image, const fusion::IntrinsicMatrix base, 
+void System::process_images(const cv::Mat depth, const cv::Mat image, 
                             bool bSubmapping, bool bSemantic, bool bRecordSequence)
 {
     cv::Mat depth_float;
@@ -184,7 +177,7 @@ void System::process_images(const cv::Mat depth, const cv::Mat image, const fusi
         cv::imwrite(name_color, color);
     }
 
-    // std::cout << "Frame #" << frame_id << std::endl;
+    std::cout << "Frame #" << frame_id << std::endl;
     // In tracking and Mapping, loop through all active submaps
     for(size_t i=0; i<manager->active_submaps.size(); ++i)
     {
@@ -219,9 +212,12 @@ void System::process_images(const cv::Mat depth, const cv::Mat image, const fusi
         {
             auto reference_image = odometry->get_reference_image(i);
             auto reference_frame = reference_image->get_reference_frame();
+            
             if(manager->active_submaps[i]->bRender){
                 // update the map
+                std::cout << "Map fusing" << std::endl;
                 manager->active_submaps[i]->update(reference_image);
+                std::cout << "Raytracing " << std::endl;
                 manager->active_submaps[i]->raycast(reference_image->get_vmap(), reference_image->get_nmap(0), reference_frame->pose);
                 reference_image->resize_device_map();
                 

@@ -5,14 +5,11 @@
 namespace fusion
 {
 
-DenseOdometry::DenseOdometry(const fusion::IntrinsicMatrix base, int NUM_PYR)
+DenseOdometry::DenseOdometry()
     : tracker(new DenseTracking()),
       trackingLost(false),
       initialized(false)
 {
-  currDeviceMapPyramid = std::make_shared<DeviceImage>(base, NUM_PYR);
-  std::shared_ptr<DeviceImage> refDeviceMapPyramid = std::make_shared<DeviceImage>(base, NUM_PYR);
-  vModelDeviceMapPyramid.push_back(refDeviceMapPyramid);
   // BuildIntrinsicPyramid(base, cam_params, NUM_PYR);
   // this->base = base;
   // this->NUM_PYR = NUM_PYR;
@@ -20,20 +17,108 @@ DenseOdometry::DenseOdometry(const fusion::IntrinsicMatrix base, int NUM_PYR)
   // Create K pyramid
   std::cout << "Inside DO: \n" << GlobalCfg.K << std::endl << std::endl;
   vK.clear();
+  vKInv.clear();
   vK.push_back(GlobalCfg.K);
+  vKInv.push_back(GlobalCfg.KInv);
   for (int i = 0; i < GlobalCfg.maxPyramidLevel - 1; ++i)
   {
     Eigen::Matrix3f tmpK = vK[i]*0.5;
     vK.push_back(tmpK);
+
+    Eigen::Matrix3f tmpKInv = tmpK;
+    tmpKInv(0,0) = 1.0/tmpKInv(0,0);
+    tmpKInv(1,1) = 1.0/tmpKInv(1,1);
+    vKInv.push_back(tmpKInv);
   }
-  for (int i = 0; i < GlobalCfg.maxPyramidLevel; ++i)
-  {
-    // std::cout << cam_params[i].fx << ", " << cam_params[i].fy << ", " 
-    //           << cam_params[i].cx << ", " << cam_params[i].cy << std::endl;
-    std::cout << vK[i] << std::endl;
-  }
+
+  currDeviceMapPyramid = std::make_shared<DeviceImage>(vKInv);
+  std::shared_ptr<DeviceImage> refDeviceMapPyramid = std::make_shared<DeviceImage>(vKInv);
+  vModelDeviceMapPyramid.push_back(refDeviceMapPyramid);
 }
 
+// // Dont use Device image in tracking
+// void DenseOdometry::trackFrame(std::shared_ptr<RgbdFrame> frame)
+// {
+//   // // CURRENT, updated in every submap
+//   // upload(frame);  // nmap & vmap calculated here
+
+//   if (!initialized)
+//   {
+//     std::cout << "Odometry: Initialising... " << std::endl;
+//     vModelFrames.push_back(frame);
+//     copyDeviceImage(currDeviceMapPyramid, vModelDeviceMapPyramid[submapIdx]);
+    
+//     std::cout << "-- Constructing intensity pyramid...";
+//     tracker->set_reference_image(frame->image, vKInv.size());
+//     std::cout << "  Done.\n" << "-- Constructing vmap and nmap pyramid..." ;
+//     tracker->set_reference_depth(frame->depth, vKInv);
+//     std::cout << "  Done." << std::endl;
+
+//     initialized = true;
+//     return;
+//   }
+
+//   std::cout << " In Tracking: current frame is: " << frame->id
+//             << ", reference frame is: " << vModelFrames[submapIdx]->id
+//             << std::endl;
+
+//   // std::cout << "Odometry: Set context... " << std::endl;
+//   context.use_initial_guess_ = true;
+//   context.initial_estimate_ = Sophus::SE3d();
+//   context.K_pyr_ = vK;
+//   context.max_iterations_ = {10, 5, 3, 3, 3};
+
+//   // std::cout << "Odometry: Compute transform... " << std::endl;
+
+  
+//   // intensity_src_pyr, intensity_ref_pyr, intensity_dx_pyr, intensity_dy_pyr[level].
+
+//   // vmap_src_pyr, vmap_ref_pyr, nmap_src_pyr, nmap_ref_pyr;
+//   std::cout << "Constructing intensity pyramid...";
+//   tracker->set_source_image(frame->image, vKInv.size());
+//   std::cout << "  Done.\n" << "Constructing vmap and nmap pyramid..." ;
+//   tracker->set_source_depth(frame->depth, vKInv);
+//   std::cout << "  Done." << std::endl;
+  
+//   // Tracking
+//   result = tracker->compute_transform(context);
+//   result.update = vModelFrames[submapIdx]->pose * result.update;
+
+//   // if(manager->active_submaps[submapIdx]->bTrack)
+//   // {
+//   //   result = tracker->compute_transform(context);
+//   //   result.update = vModelFrames[submapIdx]->pose * result.update;
+//   // } 
+//   // else 
+//   // {
+//   //   Sophus::SE3d Tmf = vModelFrames[trackIdx]->pose;
+//   //   Sophus::SE3d Twm = manager->active_submaps[trackIdx]->poseGlobal;
+//   //   Sophus::SE3d Twcinv = manager->active_submaps[submapIdx]->poseGlobal.inverse();
+//   //   // pose of input frame w.r.t. current sm
+//   //   result.update = Twcinv * Twm * Tmf;
+//   //   result.sucess = true;
+//   // }
+
+//   // std::cout << "Odometry: Update LastFrame... " << std::endl;
+//   if (result.sucess)
+//   {
+//     // if(manager->active_submaps[submapIdx]->bTrack)
+//     //   frame->pose = vModelFrames[submapIdx]->pose * result.update;
+//     // else
+//     frame->pose = result.update;
+//     vModelFrames[submapIdx] = frame;
+//     copyDeviceImage(currDeviceMapPyramid, vModelDeviceMapPyramid[submapIdx]);
+//     trackingLost = false;
+
+//     std::cout << frame->pose.matrix() << std::endl;
+//   }
+//   else
+//   {
+//     trackingLost = true;
+//   }
+// }
+
+// /* TEST disable device image
 void DenseOdometry::trackFrame(std::shared_ptr<RgbdFrame> frame)
 {
   // CURRENT, updated in every submap
@@ -87,6 +172,7 @@ void DenseOdometry::trackFrame(std::shared_ptr<RgbdFrame> frame)
     trackingLost = true;
   }
 }
+// */
 
 /* Semantic & Reloc disabled for now.
 void DenseOdometry::trackDepthOnly(std::shared_ptr<RgbdFrame> frame, float& icp_error)
