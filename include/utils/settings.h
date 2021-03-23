@@ -49,9 +49,9 @@ struct Config
     float cy = 239.5;
     float invfx;
     float invfy;
-    Eigen::Matrix3f mK;
-    Eigen::Matrix3f mKInv;
-    cv::Mat mCvK;
+    Eigen::Matrix3f K;
+    Eigen::Matrix3f KInv;
+    cv::Mat cvK;
     // Eigen::Vector<float, 5> mDistCoeff;
     // cv::Mat mCvDistCoeff;
     float mfBaseline = 40;

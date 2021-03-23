@@ -1,5 +1,6 @@
 #include "tracking/rgbd_odometry.h"
 #include "tracking/icp_tracker.h"
+#include "utils/settings.h"
 
 namespace fusion
 {
@@ -12,9 +13,25 @@ DenseOdometry::DenseOdometry(const fusion::IntrinsicMatrix base, int NUM_PYR)
   currDeviceMapPyramid = std::make_shared<DeviceImage>(base, NUM_PYR);
   std::shared_ptr<DeviceImage> refDeviceMapPyramid = std::make_shared<DeviceImage>(base, NUM_PYR);
   vModelDeviceMapPyramid.push_back(refDeviceMapPyramid);
-  BuildIntrinsicPyramid(base, cam_params, NUM_PYR);
-  this->base = base;
-  this->NUM_PYR = NUM_PYR;
+  // BuildIntrinsicPyramid(base, cam_params, NUM_PYR);
+  // this->base = base;
+  // this->NUM_PYR = NUM_PYR;
+
+  // Create K pyramid
+  std::cout << "Inside DO: \n" << GlobalCfg.K << std::endl << std::endl;
+  vK.clear();
+  vK.push_back(GlobalCfg.K);
+  for (int i = 0; i < GlobalCfg.maxPyramidLevel - 1; ++i)
+  {
+    Eigen::Matrix3f tmpK = vK[i]*0.5;
+    vK.push_back(tmpK);
+  }
+  for (int i = 0; i < GlobalCfg.maxPyramidLevel; ++i)
+  {
+    // std::cout << cam_params[i].fx << ", " << cam_params[i].fy << ", " 
+    //           << cam_params[i].cx << ", " << cam_params[i].cy << std::endl;
+    std::cout << vK[i] << std::endl;
+  }
 }
 
 void DenseOdometry::trackFrame(std::shared_ptr<RgbdFrame> frame)
@@ -38,7 +55,7 @@ void DenseOdometry::trackFrame(std::shared_ptr<RgbdFrame> frame)
   // std::cout << "Odometry: Set context... " << std::endl;
   context.use_initial_guess_ = true;
   context.initial_estimate_ = Sophus::SE3d();
-  context.intrinsics_pyr_ = cam_params;
+  context.K_pyr_ = vK;
   context.max_iterations_ = {10, 5, 3, 3, 3};
 
   // std::cout << "Odometry: Compute transform... " << std::endl;
@@ -175,16 +192,16 @@ void DenseOdometry::upload_semantics(std::shared_ptr<RgbdFrame> frame, int i){
 
 void DenseOdometry::relocUpdate(std::shared_ptr<RgbdFrame> frame)
 {
-  std::shared_ptr<DeviceImage> currDeviceMapPyramid_copy = std::make_shared<DeviceImage>(base, NUM_PYR);
-  currDeviceMapPyramid_copy->upload(frame);
-  copyDeviceImage(currDeviceMapPyramid_copy, vModelDeviceMapPyramid[submapIdx]);
-  // vModelFrames[submapIdx] = std::make_shared<RgbdFrame>();
-  // frame->copyTo(vModelFrames[submapIdx]);
-  if(submapIdx < vModelFrames.size()){
-    vModelFrames[submapIdx] = frame;
-  } else {
-    vModelFrames.push_back(frame);
-  }
+  // std::shared_ptr<DeviceImage> currDeviceMapPyramid_copy = std::make_shared<DeviceImage>(base, NUM_PYR);
+  // currDeviceMapPyramid_copy->upload(frame);
+  // copyDeviceImage(currDeviceMapPyramid_copy, vModelDeviceMapPyramid[submapIdx]);
+  // // vModelFrames[submapIdx] = std::make_shared<RgbdFrame>();
+  // // frame->copyTo(vModelFrames[submapIdx]);
+  // if(submapIdx < vModelFrames.size()){
+  //   vModelFrames[submapIdx] = frame;
+  // } else {
+  //   vModelFrames.push_back(frame);
+  // }
 }
 
 void DenseOdometry::reset()

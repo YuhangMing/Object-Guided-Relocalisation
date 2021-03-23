@@ -130,7 +130,7 @@ void rgb_reduce(
     cv::cuda::GpuMat &sum,
     cv::cuda::GpuMat &out,
     const Sophus::SE3d &pose,
-    const IntrinsicMatrix K,
+    const Eigen::Matrix3f K,
     float *jtj, float *jtr,
     float *residual)
 {
@@ -148,15 +148,192 @@ void rgb_reduce(
     rr.dIdx = intensity_dx;
     rr.dIdy = intensity_dy;
     rr.pose = Matrix3x4f(pose.cast<float>().matrix3x4());
-    rr.fx = K.fx;
-    rr.fy = K.fy;
-    rr.cx = K.cx;
-    rr.cy = K.cy;
-    rr.invfx = K.invfx;
-    rr.invfy = K.invfy;
+    rr.fx = K(0,0);
+    rr.fy = K(1,1);
+    rr.cx = K(0,2);
+    rr.cy = K(1,2);
+    rr.invfx = 1.0 / rr.fx;
+    rr.invfy = 1.0 / rr.fy;
     rr.out = sum;
 
     rgb_reduce_kernel<<<96, 224>>>(rr);
+    cv::cuda::reduce(sum, out, 0, cv::REDUCE_SUM);
+
+    cv::Mat host_data;
+    out.download(host_data);
+    create_jtjjtr<6, 7>(host_data, jtj, jtr);
+    residual[0] = host_data.ptr<float>()[27];
+    residual[1] = host_data.ptr<float>()[28];
+}
+
+struct RgbReduction2
+{
+    __device__ bool find_corresp(int &x, int &y)
+    {
+        Vector4f pt = last_vmap.ptr(y)[x];
+        if (pt.w < 0 || isnan(pt.x))
+            return false;
+
+        i_l = last_image.ptr(y)[x];
+        if (!isfinite(i_l))
+            return false;
+
+        p_transformed = pose(ToVector3(pt));
+        u0 = p_transformed.x / p_transformed.z * fx + cx;
+        v0 = p_transformed.y / p_transformed.z * fy + cy;
+        if (u0 >= 2 && u0 < cols - 2 && v0 >= 2 && v0 < rows - 2)
+        {
+            i_c = interp2(curr_image, u0, v0);
+            dx = interp2(dIdx, u0, v0);
+            dy = interp2(dIdy, u0, v0);
+
+            return (dx > 2 || dy > 2) && isfinite(i_c) && isfinite(dx) && isfinite(dy);
+        }
+
+        return false;
+    }
+
+    __device__ float interp2(cv::cuda::PtrStep<float> image, float &x, float &y)
+    {
+        int u = std::floor(x), v = std::floor(y);
+        float coeff_x = x - u, coeff_y = y - v;
+        return (image.ptr(v)[u] * (1 - coeff_x) + image.ptr(v)[u + 1] * coeff_x) * (1 - coeff_y) +
+               (image.ptr(v + 1)[u] * (1 - coeff_x) + image.ptr(v + 1)[u + 1] * coeff_x) * coeff_y;
+    }
+
+    __device__ void compute_jacobian(int &k, float *sum)
+    {
+        int y = k / cols;
+        int x = k - y * cols;
+
+        bool corresp_found = find_corresp(x, y);
+        float row[7] = {0, 0, 0, 0, 0, 0, 0};
+
+        if (corresp_found)
+        {
+            Vector3f left;
+            float z_inv = 1.0 / p_transformed.z;
+            left.x = dx * fx * z_inv;
+            left.y = dy * fy * z_inv;
+            left.z = -(left.x * p_transformed.x + left.y * p_transformed.y) * z_inv;
+
+            float residual = i_c - i_l;
+
+            if (stddev > 10e-5)
+                residual /= stddev;
+
+            float huber_th = 1.345 * stddev;
+
+            float weight = 1;
+
+            if (fabs(residual) > huber_th && stddev > 10e-6)
+            {
+                weight = sqrtf(huber_th / fabs(residual));
+            }
+
+            row[6] = weight * (-residual);
+            *(Vector3f *)&row[0] = weight * left;
+            // *(Vector3f *)&row[3] = weight * p_transformed.cross(left);
+            // row[0] = dx * fx * z_inv;
+            // row[1] = dy * fy * z_inv;
+            // row[2] = -(row[0] * p_transformed.x + row[1] * p_transformed.y) * z_inv;
+            row[3] = row[2] * p_transformed.y - dy * fy;
+            row[4] = -row[2] * p_transformed.x + dx * fx;
+            row[5] = -row[0] * p_transformed.y + row[1] * p_transformed.x;
+        }
+
+        int count = 0;
+#pragma unroll
+        for (int i = 0; i < 7; ++i)
+#pragma unroll
+            for (int j = i; j < 7; ++j)
+                sum[count++] = row[i] * row[j];
+
+        sum[count] = (float)corresp_found;
+    }
+
+    __device__ __forceinline__ void operator()()
+    {
+        float sum[29] = {0, 0, 0, 0, 0, 0, 0, 0,
+                         0, 0, 0, 0, 0, 0, 0, 0,
+                         0, 0, 0, 0, 0, 0, 0, 0,
+                         0, 0, 0, 0, 0};
+
+        float val[29];
+        for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < N; i += blockDim.x * gridDim.x)
+        {
+            compute_jacobian(i, val);
+#pragma unroll
+            for (int j = 0; j < 29; ++j)
+                sum[j] += val[j];
+        }
+
+        BlockReduce<float, 29>(sum);
+
+        if (threadIdx.x == 0)
+#pragma unroll
+            for (int i = 0; i < 29; ++i)
+                out.ptr(blockIdx.x)[i] = sum[i];
+    }
+
+    int cols, rows, N;
+    float u0, v0;
+    Matrix3x4f pose;
+    float fx, fy, cx, cy, invfx, invfy;
+    cv::cuda::PtrStep<Vector4f> point_cloud, last_vmap;
+    cv::cuda::PtrStep<float> last_image, curr_image;
+    cv::cuda::PtrStep<float> dIdx, dIdy;
+    cv::cuda::PtrStep<float> out;
+    Vector3f p_transformed, p_last;
+    float stddev;
+
+private:
+    float i_c, i_l, dx, dy;
+};
+
+__global__ void rgb_reduce_kernel2(RgbReduction2 rr)
+{
+    rr();
+}
+
+void rgb_step(const cv::cuda::GpuMat &curr_intensity,
+              const cv::cuda::GpuMat &last_intensity,
+              const cv::cuda::GpuMat &last_vmap,
+              const cv::cuda::GpuMat &curr_vmap,
+              const cv::cuda::GpuMat &intensity_dx,
+              const cv::cuda::GpuMat &intensity_dy,
+              cv::cuda::GpuMat &sum,
+              cv::cuda::GpuMat &out,
+              const float stddev_estimate,
+              const Sophus::SE3d &pose,
+              const Eigen::Matrix3f K,
+              float *jtj, float *jtr,
+              float *residual)
+{
+    int cols = curr_intensity.cols;
+    int rows = curr_intensity.rows;
+
+    RgbReduction2 rr;
+    rr.cols = cols;
+    rr.rows = rows;
+    rr.N = cols * rows;
+    rr.last_image = last_intensity;
+    rr.curr_image = curr_intensity;
+    rr.point_cloud = curr_vmap;
+    rr.last_vmap = last_vmap;
+    rr.dIdx = intensity_dx;
+    rr.dIdy = intensity_dy;
+    rr.pose = pose.cast<float>().matrix3x4();
+    rr.stddev = stddev_estimate;
+    rr.fx = K(0,0);
+    rr.fy = K(1,1);
+    rr.cx = K(0,2);
+    rr.cy = K(1,2);
+    rr.invfx = 1.0 / rr.fx;
+    rr.invfy = 1.0 / rr.fy;
+    rr.out = sum;
+
+    rgb_reduce_kernel2<<<96, 224>>>(rr);
     cv::cuda::reduce(sum, out, 0, cv::REDUCE_SUM);
 
     cv::Mat host_data;
@@ -280,7 +457,7 @@ void icp_reduce(
     cv::cuda::GpuMat &sum,
     cv::cuda::GpuMat &out,
     const Sophus::SE3d &pose,
-    const IntrinsicMatrix K,
+    const Eigen::Matrix3f K,
     float *jtj, float *jtr,
     float *residual)
 {
@@ -299,10 +476,10 @@ void icp_reduce(
     icp.pose = pose.cast<float>().matrix3x4();
     icp.angleThresh = cos(30 * 3.14 / 180);
     icp.distThresh = 0.01;
-    icp.fx = K.fx;
-    icp.fy = K.fy;
-    icp.cx = K.cx;
-    icp.cy = K.cy;
+    icp.fx = K(0,0);
+    icp.fy = K(1,1);
+    icp.cx = K(0,2);
+    icp.cy = K(1,2);
 
     icp_reduce_kernel<<<96, 224>>>(icp);
     // reduce from sum(96x29) to out(1x29) by sum over all rows in a col

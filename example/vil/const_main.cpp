@@ -22,10 +22,9 @@ int main(int argc, char **argv)
             << std::endl;
 
     SetCalibration();
-    std::cout << GlobalCfg.mK << std::endl;
-
 	fusion::IntrinsicMatrix K(GlobalCfg.width, GlobalCfg.height, GlobalCfg.fx, 
                             GlobalCfg.fy, GlobalCfg.cx, GlobalCfg.cy);
+    
     fusion::System slam(K, GlobalCfg.maxPyramidLevel, GlobalCfg.bSemantic);
 
     image_counter = 0;

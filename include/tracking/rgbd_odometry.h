@@ -1,5 +1,5 @@
-#ifndef SLAM_LIB_DENSE_ODOMETRY_H
-#define SLAM_LIB_DENSE_ODOMETRY_H
+#ifndef DENSE_ODOMETRY_H
+#define DENSE_ODOMETRY_H
 
 #include "data_struct/rgbd_frame.h"
 #include "tracking/device_image.h"
@@ -53,6 +53,8 @@ public:
   // void SetDetector(semantic::MaskRCNN * pDetector);
 
 private:
+  std::vector<Eigen::Matrix3f> vK;
+
   // std::shared_ptr<RgbdFrame> lastTracedFrame;         // consider change this to vector
   std::shared_ptr<DeviceImage> currDeviceMapPyramid;
   // std::shared_ptr<DeviceImage> refDeviceMapPyramid;   // consider change this to vector
@@ -71,9 +73,10 @@ private:
   // // semantic related
   // semantic::MaskRCNN * detector;
 
-  // for reloc
-  IntrinsicMatrix base;
-  int NUM_PYR;
+  // Reloc disabled for now
+  // // for reloc
+  // IntrinsicMatrix base;
+  // int NUM_PYR;
 };
 
 } // namespace fusion

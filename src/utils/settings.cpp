@@ -3,20 +3,20 @@
 
 void SetCalibration()
 {
-    GlobalCfg.mK(0, 0) = GlobalCfg.fx;
-    GlobalCfg.mK(1, 1) = GlobalCfg.fy;
-    GlobalCfg.mK(0, 2) = GlobalCfg.cx;
-    GlobalCfg.mK(1, 2) = GlobalCfg.cy;
+    GlobalCfg.K(0, 0) = GlobalCfg.fx;
+    GlobalCfg.K(1, 1) = GlobalCfg.fy;
+    GlobalCfg.K(0, 2) = GlobalCfg.cx;
+    GlobalCfg.K(1, 2) = GlobalCfg.cy;
     GlobalCfg.invfx = 1.0 / GlobalCfg.fx;
     GlobalCfg.invfy = 1.0 / GlobalCfg.fy;
 
-    GlobalCfg.mKInv = GlobalCfg.mK.inverse();
+    GlobalCfg.KInv = GlobalCfg.K.inverse();
 
-    GlobalCfg.mCvK = cv::Mat::eye(3, 3, CV_32F);
-    GlobalCfg.mCvK.at<float>(0, 0) = GlobalCfg.fx;
-    GlobalCfg.mCvK.at<float>(1, 1) = GlobalCfg.fy;
-    GlobalCfg.mCvK.at<float>(0, 2) = GlobalCfg.cx;
-    GlobalCfg.mCvK.at<float>(1, 2) = GlobalCfg.cy;
+    GlobalCfg.cvK = cv::Mat::eye(3, 3, CV_32F);
+    GlobalCfg.cvK.at<float>(0, 0) = GlobalCfg.fx;
+    GlobalCfg.cvK.at<float>(1, 1) = GlobalCfg.fy;
+    GlobalCfg.cvK.at<float>(0, 2) = GlobalCfg.cx;
+    GlobalCfg.cvK.at<float>(1, 2) = GlobalCfg.cy;
 
     // GlobalCfg.mCvDistCoeff.create(4, 1, CV_32FC1);
     // GlobalCfg.mCvDistCoeff.at<float>(0) = GlobalCfg.mDistCoeff[0];

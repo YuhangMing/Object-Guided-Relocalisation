@@ -87,7 +87,6 @@ PRIVATE
     src/tracking/rgbd_odometry.cpp
     src/tracking/device_image.cpp
     src/tracking/cuda_imgproc.cu
-    src/tracking/m_estimator.cu
     src/tracking/pose_estimator.cu
     src/tracking/build_pyramid.cpp
 

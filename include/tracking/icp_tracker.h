@@ -20,7 +20,7 @@ struct TrackingResult
 struct TrackingContext
 {
   bool use_initial_guess_;
-  std::vector<IntrinsicMatrix> intrinsics_pyr_;
+  std::vector<Eigen::Matrix3f> K_pyr_;
   std::vector<int> max_iterations_;
   Sophus::SE3d initial_estimate_;
 };
