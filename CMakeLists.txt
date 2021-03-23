@@ -75,6 +75,8 @@ target_sources(fusion
 PRIVATE
     src/system.cpp
     src/map_manager.cpp
+
+    src/utils/settings.cpp
     
     src/data_struct/rgbd_frame.cpp
     src/data_struct/map_struct.cu
@@ -88,11 +90,6 @@ PRIVATE
     src/tracking/m_estimator.cu
     src/tracking/pose_estimator.cu
     src/tracking/build_pyramid.cpp
-
-    src/features/matcher.cpp
-    src/features/extractor.cpp
-
-    src/keyframe_graph/keyframe_graph.cpp
 
     src/relocalization/ransac_ao.cpp
     src/relocalization/relocalizer.cpp

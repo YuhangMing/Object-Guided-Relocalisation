@@ -38,17 +38,19 @@ void icp_reduce(
     float *jtj, float *jtr,
     float *residual);
 
-// // Point-to-Point ICP Probabilistic model
-// // cent icp step and returns hessian
-// void cent_reduce(
-//     const cv::cuda::GpuMat &curr_cent,
-//     const cv::cuda::GpuMat &last_cent,
-//     cv::cuda::GpuMat &sum,
-//     cv::cuda::GpuMat &out,
-//     const Sophus::SE3d &pose,
-//     const IntrinsicMatrix K,
-//     float *jtj, float *jtr,
-//     float *residual);
+/* Semantic & Reloc disabled for now
+// Point-to-Point ICP Probabilistic model
+// cent icp step and returns hessian
+void cent_reduce(
+    const cv::cuda::GpuMat &curr_cent,
+    const cv::cuda::GpuMat &last_cent,
+    cv::cuda::GpuMat &sum,
+    cv::cuda::GpuMat &out,
+    const Sophus::SE3d &pose,
+    const IntrinsicMatrix K,
+    float *jtj, float *jtr,
+    float *residual);
+*/
 
 } // namespace fusion
 

@@ -8,7 +8,6 @@
 #include "system.h"
 #include "data_struct/map_struct.h"
 #include "data_struct/rgbd_frame.h"
-#include "features/extractor.h"
 
 namespace fusion
 {

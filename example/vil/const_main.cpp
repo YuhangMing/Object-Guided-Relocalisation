@@ -1,51 +1,48 @@
 #include "system.h"
 #include "visualization/main_window.h"
+#include "utils/settings.h"
 #include <ctime>
 
-bool load_next_image_vil_sequence(cv::Mat &depth, cv::Mat &color, std::string img_path, int id);
+bool load_next_image_vil_sequence(cv::Mat &depth, cv::Mat &color, std::string img_path);
 int image_counter;
-//- BOR sequences
-int num_img[10] = {3522, 1237, 887, 1221, 809, 1141, 919, 1470, 501, 870};      // num of frames for construction
 
 int main(int argc, char **argv)
 {
-	if(argc < 5){
-		std::cout << "executable data_path folder_name sequence_number display_or_not" << std::endl;
+	if(argc < 2){
+		std::cout << "executable sequence_number" << std::endl;
 		return 0;
 	}
 
-    bool bSubmapping = false;
-    bool bSemantic = true;
-    bool bRecord = false;
-    std::string data_path = argv[1];
-    std::string folder = argv[2];
-    int sequence_id = std::atoi(argv[3]);
-    std::string display = argv[4];
-    image_counter = 0;
-    cv::Mat image, depth;
+    std::string img_path = GlobalCfg.data_folder + "sequence0" + argv[1] + "/Construction";
+    int sequence_id = std::atoi(argv[1]);
 
-    std::cout << "Performing relocalisation in sequence0" << sequence_id << " with\n" 
-            << "    " << num_img[sequence_id] << " frames used for recons."
+    std::cout << "Running sequence0" << sequence_id << " with " 
+            << GlobalCfg.num_img[sequence_id] << " frames loaded from "
+            << img_path
             << std::endl;
 
-	fusion::IntrinsicMatrix K(640, 480, 580, 580, 319.5, 239.5);
-    fusion::System slam(K, 5, bSemantic);
+    SetCalibration();
+    std::cout << GlobalCfg.mK << std::endl;
 
-    std::string img_path = data_path + folder + "/sequence0" + std::to_string(sequence_id) + "/Construction";
-    std::cout << img_path << std::endl;
+	fusion::IntrinsicMatrix K(GlobalCfg.width, GlobalCfg.height, GlobalCfg.fx, 
+                            GlobalCfg.fy, GlobalCfg.cx, GlobalCfg.cy);
+    fusion::System slam(K, GlobalCfg.maxPyramidLevel, GlobalCfg.bSemantic);
 
-    if(display == "true"){
+    image_counter = 0;
+    cv::Mat image, depth;
+    if(GlobalCfg.bEnableViewer){
         MainWindow window("Object-Guided-Reloc", 1920, 920);
         window.SetSystem(&slam);
 
         while (!pangolin::ShouldQuit())
         {
-            if (!window.IsPaused() && load_next_image_vil_sequence(depth, image, img_path, sequence_id))
+            if (!window.IsPaused() && load_next_image_vil_sequence(depth, image, img_path))
             {
                 window.SetRGBSource(image);
                 window.SetDepthSource(depth);   // raw depth
                 // std::clock_t start = std::clock();
-                slam.process_images(depth, image, K, bSubmapping, bSemantic, bRecord);
+                slam.process_images(depth, image, K, 
+                        GlobalCfg.bSubmapping, GlobalCfg.bSemantic, GlobalCfg.bRecord);
                 // std::cout << "## Processing an image takes "
                     //     << ( std::clock() - start ) / (double) CLOCKS_PER_SEC 
                     //     << " seconds" << std::endl;
@@ -57,8 +54,10 @@ int main(int argc, char **argv)
                 window.mbFlagUpdateMesh = true;
 
                 // if(image_counter > num_img[sequence_id-1] || slam.b_reloc_attp)
-                if(image_counter > num_img[sequence_id])
+                if(image_counter > GlobalCfg.num_img[sequence_id]){
+                    std::cout << "ALL IMAGES LOADED !!!!" << std::endl;
                     window.SetPause();
+                }
 
             }
 
@@ -77,22 +76,23 @@ int main(int argc, char **argv)
     }
     else
     {
-        while(load_next_image_vil_sequence(depth, image, folder, sequence_id)){        
-            slam.process_images(depth, image, K, bSubmapping, bSemantic, bRecord);
+        while(load_next_image_vil_sequence(depth, image, img_path)){        
+            slam.process_images(depth, image, K, 
+                    GlobalCfg.bSubmapping, GlobalCfg.bSemantic, GlobalCfg.bRecord);
         }
         // slam.writeMapToDisk("map-"+folder+"0"+std::to_string(sequence_id)+".data");
     }
     
 }
 
-bool load_next_image_vil_sequence(cv::Mat &depth, cv::Mat &color, std::string img_path, int id)
+bool load_next_image_vil_sequence(cv::Mat &depth, cv::Mat &color, std::string img_path)
 {
-	if(image_counter > num_img[id]){
-        std::cout << "!!! REACHED THE END OF THE SEQUENCE. " << std::endl;
-    	return false;
-    }
-    if(image_counter == num_img[id])
-    	std::cout << "LAST IMAGE LOADED !!!!" << std::endl;
+	// if(image_counter > num_img[id]){
+    //     std::cout << "!!! REACHED THE END OF THE SEQUENCE. " << std::endl;
+    // 	return false;
+    // }
+    // if(image_counter == num_img[id])
+    // 	std::cout << "LAST IMAGE LOADED !!!!" << std::endl;
 
     // depth
     std::string name_depth = img_path + "/depth/" + std::to_string(image_counter) + ".png";
@@ -101,6 +101,12 @@ bool load_next_image_vil_sequence(cv::Mat &depth, cv::Mat &color, std::string im
     // color
     std::string name_color = img_path + "/color/" + std::to_string(image_counter) + ".png";
     color = cv::imread(name_color, cv::IMREAD_UNCHANGED);
+    
+    if(depth.empty() || color.empty()){
+    	std::cout << "!!! ERROR !!! Loading failed at image " << image_counter << std::endl;
+    	return false;
+    }
+
     cv::cvtColor(color, color, CV_BGR2RGB);
 
     // cv::imshow("RGB", color);
@@ -108,10 +114,6 @@ bool load_next_image_vil_sequence(cv::Mat &depth, cv::Mat &color, std::string im
     // cv::waitKey(0);
 
     image_counter++;
-    if(depth.empty() || color.empty()){
-    	std::cout << "!!! ERROR !!! Loading failed at image " << image_counter << std::endl;
-    	return false;
-    } else {
-    	return true;
-    }
+	return true;
+
 }

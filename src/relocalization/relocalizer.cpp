@@ -20,22 +20,6 @@ Relocalizer::Relocalizer(const fusion::IntrinsicMatrix K) : cam_param(K)
     label_vec.push_back(6);
 }
 
-void Relocalizer::setFeatureExtractor(std::shared_ptr<FeatureExtractor> ext)
-{
-    extractor = ext;
-}
-
-void Relocalizer::setDescriptorMatcher(std::shared_ptr<DescriptorMatcher> mcr)
-{
-    matcher = mcr;
-}
-
-void Relocalizer::set_map_points(std::vector<std::shared_ptr<Point3d>> mapPoints, cv::Mat &mapDescriptors)
-{
-    map_points = mapPoints;
-    map_descriptors = mapDescriptors;
-}
-
 void Relocalizer::set_target_frame(std::shared_ptr<RgbdFrame> frame)
 {
     target_frame = frame;
