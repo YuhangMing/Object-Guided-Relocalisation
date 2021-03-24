@@ -26,7 +26,7 @@ public:
     friend void copyDeviceImage(RgbdImagePtr src, RgbdImagePtr dst);
 
     void resize_pyramid(const int &max_level);
-    void resize_device_map();
+    void resize_device_map(cv::cuda::GpuMat cuVMap);
     void upload(const std::shared_ptr<RgbdFrame> frame);
     void downloadVNM(RgbdFramePtr frame, bool bTrackLost);
     

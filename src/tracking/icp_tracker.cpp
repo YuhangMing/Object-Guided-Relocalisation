@@ -29,6 +29,17 @@ TrackingResult DenseTracking::compute_transform(const RgbdImagePtr reference, co
   if (c.use_initial_guess_)
     estimate = Revertable<Sophus::SE3d>(c.initial_estimate_);
 
+  // cv::cuda::GpuMat cuRefVMap = reference->get_vmap(0);
+  // cv::cuda::GpuMat cuSrcVMap = current->get_vmap(0);
+  // cv::Mat test_ref_vmap, test_src_vmap;
+  // // cuImage.download(test_img);
+  // // cv::cvtColor(test_img, test_img, CV_RGB2BGR);
+  // cuRefVMap.download(test_ref_vmap);
+  // cuSrcVMap.download(test_src_vmap);
+  // cv::imshow("ref vmap", test_ref_vmap);
+  // cv::imshow("src vmap", test_src_vmap);
+  // cv::waitKey(0);
+
   bool invalid_error = false;
   Sophus::SE3d init_estimate = estimate.get();
 
@@ -452,17 +463,11 @@ void DenseTracking::cent_reduce(const cv::Mat &curr_cent, const cv::Mat &last_ce
 }
 */
 
-void DenseTracking::swap_intensity_pyr()
-{
-  for (int i = 0; i < intensity_src_pyr.size(); ++i)
-    intensity_src_pyr[i].swap(intensity_ref_pyr[i]);
-}
-
 void DenseTracking::set_source_image(cv::Mat img, const int num_pyr)
 {
-  cv::cuda::GpuMat image, image_float, intensity_float;
-  image.upload(img);
-  image.convertTo(image_float, CV_32FC3);
+  cv::cuda::GpuMat image_float, intensity_float;
+  src_image.upload(img);
+  src_image.convertTo(image_float, CV_32FC3);
   cv::cuda::cvtColor(image_float, intensity_float, cv::COLOR_RGB2GRAY);
   set_source_intensity(intensity_float, num_pyr);
 }
@@ -490,9 +495,9 @@ void DenseTracking::set_source_depth(cv::Mat depth, const std::vector<Eigen::Mat
 
 void DenseTracking::set_reference_image(cv::Mat img, const int num_pyr)
 {
-  cv::cuda::GpuMat image, image_float, intensity_float;
-  image.upload(img);
-  image.convertTo(image_float, CV_32FC3);
+  cv::cuda::GpuMat image_float, intensity_float;
+  ref_image.upload(img);
+  ref_image.convertTo(image_float, CV_32FC3);
   cv::cuda::cvtColor(image_float, intensity_float, cv::COLOR_RGB2GRAY);
   set_reference_intensity(intensity_float, num_pyr);
 }
@@ -511,11 +516,37 @@ void DenseTracking::set_reference_depth(cv::Mat depth, const std::vector<Eigen::
   build_vnmap_pyr(depth_ref_pyr, vmap_ref_pyr, nmap_ref_pyr, KInv_pyr);
 }
 
-// void DenseTracking::set_reference_vmap(cv::cuda::GpuMat vmap)
-// {
-//   fusion::build_vmap_pyr(vmap, vmap_ref_pyr, 5);
-//   fusion::build_nmap_pyr(vmap_ref_pyr, nmap_ref_pyr);
-// }
+void DenseTracking::update_reference_vnmap(cv::cuda::GpuMat vmap)
+{
+  int num_pyr = vmap_ref_pyr.size();
+  // std::cout << "  size of ref vmaps: " << num_pyr << std::endl;
+  build_vmap_pyr(vmap, vmap_ref_pyr, num_pyr);
+  build_nmap_pyr(vmap_ref_pyr, nmap_ref_pyr);
+
+  // cv::cuda::GpuMat cuRefVMap = vmap_ref_pyr[0];
+  // cv::Mat test_ref_vmap;
+  // // cuImage.download(test_img);
+  // // cv::cvtColor(test_img, test_img, CV_RGB2BGR);
+  // cuRefVMap.download(test_ref_vmap);
+  // cv::imshow("updated ref vmap", test_ref_vmap);
+  // cv::waitKey(0);
+}
+
+void DenseTracking::update_ref_with_src(bool bIntensity, bool bImg, bool bDepth)
+{
+  std::cout << "updating image" << std::endl;
+  if(bImg)
+    src_image.copyTo(ref_image);
+  
+  std::cout << "updating intensity & depth" << std::endl;
+  for (int i = 0; i < intensity_src_pyr.size(); ++i)
+  {
+    if(bIntensity)
+      intensity_src_pyr[i].copyTo(intensity_ref_pyr[i]);
+    if(bDepth)
+      depth_src_pyr[i].copyTo(depth_ref_pyr[i]);
+  }
+}
 
 TrackingResult DenseTracking::compute_transform(const TrackingContext &context)
 {
@@ -526,6 +557,18 @@ TrackingResult DenseTracking::compute_transform(const TrackingContext &context)
 
   bool invalid_error = false;
   Sophus::SE3d init_estimate = estimate.get();
+
+  // std::cout << &nmap_ref_pyr[0] << " vs " << &nmap_src_pyr[0] << std::endl;
+  // cv::cuda::GpuMat cuRefVMap = nmap_ref_pyr[0];
+  // cv::cuda::GpuMat cuSrcVMap = nmap_src_pyr[0];
+  // cv::Mat test_ref_vmap, test_src_vmap;
+  // // cuImage.download(test_img);
+  // // cv::cvtColor(test_img, test_img, CV_RGB2BGR);
+  // cuRefVMap.download(test_ref_vmap);
+  // cuSrcVMap.download(test_src_vmap);
+  // cv::imshow("ref vmap", test_ref_vmap);
+  // cv::imshow("src vmap", test_src_vmap);
+  // cv::waitKey(0);
 
   for (int level = context.max_iterations_.size() - 1; level >= 0; --level)
   {
@@ -593,6 +636,7 @@ TrackingResult DenseTracking::compute_transform(const TrackingContext &context)
 
       if (std::isnan(icp_error))
       {
+        std::cout << "icp reduction end up in NaN" << std::endl;
         invalid_error = true;
         break;
       }
@@ -617,6 +661,7 @@ TrackingResult DenseTracking::compute_transform(const TrackingContext &context)
 
       if (std::isnan(rgb_error))
       {
+        std::cout << "rgb reduction end up in NaN" << std::endl;
         invalid_error = true;
         break;
       }
@@ -641,6 +686,8 @@ TrackingResult DenseTracking::compute_transform(const TrackingContext &context)
 
   if (estimate.get().log().transpose().norm() > 0.1)
     std::cout << "Motion too big: " << estimate.get().log().transpose().norm() << std::endl;
+  if (invalid_error)
+    std::cout << "Invalid error in tracking!!! " << std::endl;
 
   TrackingResult result;
 
@@ -657,36 +704,73 @@ TrackingResult DenseTracking::compute_transform(const TrackingContext &context)
   return result;
 }
 
-cv::cuda::GpuMat DenseTracking::get_vmap_src(const int &level)
+cv::cuda::GpuMat DenseTracking::get_image_src()
 {
-  return vmap_src_pyr[level];
-}
-
-cv::cuda::GpuMat DenseTracking::get_nmap_src(const int &level)
-{
-  return nmap_src_pyr[level];
-}
-
-cv::cuda::GpuMat DenseTracking::get_depth_src(const int &level)
-{
-  return depth_src_pyr[level];
+  if(src_image.empty()){
+    std::cout << "No source image yet, using reference instead... " << std::endl;
+    return ref_image;
+  } else
+    return src_image;
 }
 
 cv::cuda::GpuMat DenseTracking::get_intensity_src(const int &level)
 {
-  return intensity_src_pyr[level];
+  if(intensity_src_pyr.size() == 0){
+    std::cout << "No source intensity yet, using reference instead... " << std::endl;
+    return intensity_src_pyr[level];
+  } else 
+    return intensity_src_pyr[level];
 }
 
 cv::cuda::GpuMat DenseTracking::get_intensity_dx(const int &level)
 {
-  return intensity_dx_pyr[level];
+  if(intensity_dx_pyr.size() > 0)
+    return intensity_dx_pyr[level];
+  else
+    std::cout << "intensity_dx_pyr hasn't been built yet." << std::endl;
 }
 
 cv::cuda::GpuMat DenseTracking::get_intensity_dy(const int &level)
 {
-  return intensity_dy_pyr[level];
+  if(intensity_dy_pyr.size() > 0)
+    return intensity_dy_pyr[level];
+  else
+    std::cout << "intensity_dy_pyr hasn't been built yet." << std::endl;
 }
 
+cv::cuda::GpuMat DenseTracking::get_depth_src(const int &level)
+{
+  if(depth_src_pyr.size() == 0){
+    std::cout << "No source depth yet, using reference instead... " << std::endl;
+    return depth_ref_pyr[level];
+  } else 
+    return depth_src_pyr[level];
+}
+
+cv::cuda::GpuMat DenseTracking::get_vmap_src(const int &level)
+{
+  if(vmap_src_pyr.size() ==0){
+    std::cout << "No source vmap yet, using reference instead... " << std::endl;
+    return vmap_ref_pyr[level];
+  }else{
+    std::cout << "# Source Vmap address (in icp_tracker): " << &vmap_src_pyr[level] << std::endl;
+    return vmap_src_pyr[level];
+  }
+}
+
+cv::cuda::GpuMat DenseTracking::get_nmap_src(const int &level)
+{
+  if(nmap_src_pyr.size() ==0){
+    std::cout << "No source nmap yet, using reference instead... " << std::endl;
+    return nmap_ref_pyr[level];
+  } else
+    return nmap_src_pyr[level];
+}
+
+cv::cuda::GpuMat DenseTracking::get_intensity_ref(const int &level)
+{
+  return intensity_ref_pyr[level];
+}
 cv::cuda::GpuMat DenseTracking::get_vmap_ref(const int &level)
 {
   return vmap_ref_pyr[level];
@@ -697,9 +781,5 @@ cv::cuda::GpuMat DenseTracking::get_nmap_ref(const int &level)
   return nmap_ref_pyr[level];
 }
 
-cv::cuda::GpuMat DenseTracking::get_intensity_ref(const int &level)
-{
-  return intensity_ref_pyr[level];
-}
 
 } // namespace fusion

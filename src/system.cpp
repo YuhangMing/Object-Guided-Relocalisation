@@ -164,18 +164,18 @@ void System::process_images(const cv::Mat depth, const cv::Mat image,
     float thres_passive = 0.20;
     renderIdx = manager->renderIdx;
 
-    if (bRecordSequence)
-    {
-        std::string dir = "/home/yohann/SLAMs/datasets/sequence/";
-        // depth
-        std::string name_depth = dir + "depth/" + std::to_string(frame_id) + ".png";
-        cv::imwrite(name_depth, depth);
-        // color
-        cv::Mat color;
-        cv::cvtColor(image, color, CV_RGB2BGR);
-        std::string name_color = dir + "color/" + std::to_string(frame_id) + ".png";
-        cv::imwrite(name_color, color);
-    }
+    // if (bRecordSequence)
+    // {
+    //     std::string dir = "/home/yohann/SLAMs/datasets/sequence/";
+    //     // depth
+    //     std::string name_depth = dir + "depth/" + std::to_string(frame_id) + ".png";
+    //     cv::imwrite(name_depth, depth);
+    //     // color
+    //     cv::Mat color;
+    //     cv::cvtColor(image, color, CV_RGB2BGR);
+    //     std::string name_color = dir + "color/" + std::to_string(frame_id) + ".png";
+    //     cv::imwrite(name_color, color);
+    // }
 
     std::cout << "Frame #" << frame_id << std::endl;
     // In tracking and Mapping, loop through all active submaps
@@ -210,59 +210,136 @@ void System::process_images(const cv::Mat depth, const cv::Mat image,
         /* RENDERING */
         if (!odometry->trackingLost)
         {
-            auto reference_image = odometry->get_reference_image(i);
-            auto reference_frame = reference_image->get_reference_frame();
+            /* Attepmt to not use device image in tracking. Result in noisy reconstruction.
+            // cv::cuda::GpuMat cuImage, cuDepth, cuVMap;
+            // odometry->get_current_color().copyTo(cuImage);
+            // odometry->get_current_depth().copyTo(cuDepth);
+            // odometry->get_current_vmap().copyTo(cuVMap);
             
-            if(manager->active_submaps[i]->bRender){
-                // update the map
-                std::cout << "Map fusing" << std::endl;
-                manager->active_submaps[i]->update(reference_image);
-                std::cout << "Raytracing " << std::endl;
-                manager->active_submaps[i]->raycast(reference_image->get_vmap(), reference_image->get_nmap(0), reference_frame->pose);
-                reference_image->resize_device_map();
-                
-                /*Semantic & Reloc diasbled for now
-                // add new keyframe in the map & calculate cuboids for objects detected
-                if(hasNewKeyFrame && bSemantic){
-                    manager->AddKeyFrame(current_keyframe);
-                    reference_image->downloadVNM(odometry->vModelFrames[i], false);
+            // Sophus::SE3d Tcm = current_frame->pose; // transformation from camera to map
+            // std::cout << "Pose used for fusing and raytracing:\n"
+            //           << Tcm.matrix() << std::endl;
 
-                    // // Store vertex map.
-                    // // Store vertex map of current KF as point cloud in the file.
-                    // // std::cout << "Type of vmap is ";
-                    // // std::cout << odometry->vModelFrames[i]->vmap.type() << std::endl;
-                    // std::ofstream pcd_file;
-                    // std::string pcd_file_name = "point_cloud_bin_" + std::to_string(frame_id) + ".txt";
-                    // pcd_file.open(pcd_file_name, std::ios::app);
-                    // int channel = odometry->vModelFrames[i]->vmap.channels();
-                    // int rows = odometry->vModelFrames[i]->vmap.rows;
-                    // int cols = odometry->vModelFrames[i]->vmap.cols;
-                    // float* vmap_data = (float*) odometry->vModelFrames[i]->vmap.data;
-                    // if(pcd_file.is_open())
-                    // {
-                    //     for(int vmapi=0; vmapi < rows*cols; ++vmapi){
-                    //         pcd_file << vmap_data[vmapi*4] << "," << vmap_data[vmapi*4+1] << "," 
-                    //              << vmap_data[vmapi*4+2] << "," << vmap_data[vmapi*4+3] << "\n";
-                    //     } 
-                    // }
-                    // pcd_file.close();
-                    
+            // // update the map
+            // manager->active_submaps[i]->update(cuDepth, cuImage, Tcm);
+            
+            // // ray trace;
+            // // cv::Mat test_img, test_vmap, test_nmap;
+            // // cuImage.download(test_img);
+            // // cv::cvtColor(test_img, test_img, CV_RGB2BGR);
+            // // cuVMap.download(test_vmap);
+            // // cuNMap.download(test_nmap);
+            // manager->active_submaps[i]->raycast(cuVMap, cuImage, Tcm);
+            // // cv::Mat test_raycasted_img, test_raycasted_vmap;
+            // // cuImage.download(test_raycasted_img);
+            // // cv::cvtColor(test_raycasted_img, test_raycasted_img, CV_RGB2BGR);
+            // // cuVMap.download(test_raycasted_vmap);
+            // // cv::imshow("nmap before raycast", test_nmap);
+            // // cv::imshow("vmap before raycast", test_vmap);
+            // // // cv::imshow("img before raycast", test_img);
+            // // cv::imshow("vmap after raycast", test_raycasted_vmap);
+            // // // cv::imshow("img after raycast", test_raycasted_img);
+            // // cv::waitKey(0);
 
-                    // perform semantic analysis on keyframe
-                    extract_semantics(odometry->vModelFrames[i], false, 1, 0.002, 5, 7);
-                    if(current_keyframe->numDetection > 0){
-                        manager->active_submaps[i]->update_objects(odometry->vModelFrames[i]);
-                        // INTEROGATIVE: Do we actually need this step?
-                        manager->active_submaps[i]->color_objects(reference_image);
-                        manager->active_submaps[i]->raycast(reference_image->get_vmap(), reference_image->get_nmap(0), reference_image->get_object_mask(), reference_frame->pose);
-                    }
-                }
-                */
-            } else {
-                manager->active_submaps[i]->check_visibility(reference_image);
-                manager->active_submaps[i]->raycast(reference_image->get_vmap(), reference_image->get_nmap(0), reference_frame->pose);
-                reference_image->resize_device_map();
-            }
+            // std::cout << "Update tracker references." << std::endl;
+            // odometry->update_reference_model(cuVMap); // update vmap & nmap in tracker
+            */
+
+            auto current_image = odometry->get_current_image();
+            auto current_frame = current_image->get_reference_frame();
+            
+            cv::cuda::GpuMat cuImage, cuDepth, cuVMap; // cuNMap;
+            current_image->get_image().copyTo(cuImage);
+            current_image->get_raw_depth().copyTo(cuDepth);
+            current_image->get_vmap().copyTo(cuVMap);
+            // current_image->get_nmap(0).copyTo(cuNMap);
+            Sophus::SE3d Tcm = current_frame->pose; // transformation from camera to map
+            std::cout << "Pose used for fusing and raytracing:\n"
+                      << Tcm.matrix() << std::endl;
+            
+            // update the map
+            std::cout << "Map fusing" << std::endl;
+            manager->active_submaps[i]->update(cuDepth, cuImage, Tcm);
+
+            std::cout << "Raytracing " << std::endl;
+            // cv::Mat test_vmap, test_nmap;
+            // cuVMap.download(test_vmap);
+            // cuNMap.download(test_nmap);
+            manager->active_submaps[i]->raycast(cuVMap, cuImage, Tcm);
+            // cv::Mat test_raycasted_vmap;
+            // cuVMap.download(test_raycasted_vmap);
+            // // cv::imshow("nmap before raycast", test_nmap);
+            // // cv::imshow("vmap before raycast", test_vmap);
+            // // cv::imshow("vmap after raycast", test_raycasted_vmap);
+            // // cv::waitKey(0);
+            
+            auto reference_image = odometry->get_reference_image(i);
+            reference_image->resize_device_map(cuVMap); 
+
+            // auto reference_image = odometry->get_reference_image(i);
+            // auto reference_frame = reference_image->get_reference_frame();
+            // // cv::cuda::GpuMat cuImage, cuDepth, cuVMap, cuNMap;
+            // cv::cuda::GpuMat cuImage = reference_image->get_image();
+            // cv::cuda::GpuMat cuDepth = reference_image->get_raw_depth();
+            // Sophus::SE3d Tcm = reference_frame->pose; // transformation from camera to map
+            // std::cout << "Pose used for fusing and raytracing:\n"
+            //           << Tcm.matrix() << std::endl;
+            // // update the map
+            // std::cout << "Map fusing" << std::endl;
+            // manager->active_submaps[i]->update(cuDepth, cuImage, Tcm);
+            // std::cout << "Raytracing " << std::endl;
+            // cv::cuda::GpuMat cuVMap = reference_image->get_vmap();
+            // cv::cuda::GpuMat cuNMap = reference_image->get_nmap(0);
+            // manager->active_submaps[i]->raycast(cuVMap, cuImage, Tcm);
+            // reference_image->resize_device_map(cuVMap); 
+
+            
+            // if(manager->active_submaps[i]->bRender){
+            //     // update the map
+            //     std::cout << "Map fusing" << std::endl;
+            //     manager->active_submaps[i]->update(reference_image);
+            //     std::cout << "Raytracing " << std::endl;
+            //     manager->active_submaps[i]->raycast(reference_image->get_vmap(), reference_image->get_nmap(0), reference_frame->pose);
+            //     reference_image->resize_device_map(); 
+            //     /*Semantic & Reloc diasbled for now
+            //     // add new keyframe in the map & calculate cuboids for objects detected
+            //     if(hasNewKeyFrame && bSemantic){
+            //         manager->AddKeyFrame(current_keyframe);
+            //         reference_image->downloadVNM(odometry->vModelFrames[i], false);
+            //         // // Store vertex map.
+            //         // // Store vertex map of current KF as point cloud in the file.
+            //         // // std::cout << "Type of vmap is ";
+            //         // // std::cout << odometry->vModelFrames[i]->vmap.type() << std::endl;
+            //         // std::ofstream pcd_file;
+            //         // std::string pcd_file_name = "point_cloud_bin_" + std::to_string(frame_id) + ".txt";
+            //         // pcd_file.open(pcd_file_name, std::ios::app);
+            //         // int channel = odometry->vModelFrames[i]->vmap.channels();
+            //         // int rows = odometry->vModelFrames[i]->vmap.rows;
+            //         // int cols = odometry->vModelFrames[i]->vmap.cols;
+            //         // float* vmap_data = (float*) odometry->vModelFrames[i]->vmap.data;
+            //         // if(pcd_file.is_open())
+            //         // {
+            //         //     for(int vmapi=0; vmapi < rows*cols; ++vmapi){
+            //         //         pcd_file << vmap_data[vmapi*4] << "," << vmap_data[vmapi*4+1] << "," 
+            //         //              << vmap_data[vmapi*4+2] << "," << vmap_data[vmapi*4+3] << "\n";
+            //         //     } 
+            //         // }
+            //         // pcd_file.close();
+            //         // perform semantic analysis on keyframe
+            //         extract_semantics(odometry->vModelFrames[i], false, 1, 0.002, 5, 7);
+            //         if(current_keyframe->numDetection > 0){
+            //             manager->active_submaps[i]->update_objects(odometry->vModelFrames[i]);
+            //             // INTEROGATIVE: Do we actually need this step?
+            //             manager->active_submaps[i]->color_objects(reference_image);
+            //             manager->active_submaps[i]->raycast(reference_image->get_vmap(), reference_image->get_nmap(0), reference_image->get_object_mask(), reference_frame->pose);
+            //         }
+            //     }
+            //     */
+            // } else {
+            //     manager->active_submaps[i]->check_visibility(reference_image);
+            //     manager->active_submaps[i]->raycast(reference_image->get_vmap(), reference_image->get_nmap(0), reference_frame->pose);
+            //     reference_image->resize_device_map();
+            // }
             // set current map idx to trackIdx in the odometry
             odometry->setTrackIdx(i);
         }
@@ -280,52 +357,52 @@ void System::process_images(const cv::Mat depth, const cv::Mat image,
             // relocalization();
         }
 
-        if(bSubmapping)
-        {
-            // // check visible block percentage
-            // float tmp_perct = manager->CheckVisPercent(i);
-            // if(tmp_perct < thres_passive){
-            //     std::cout << "Move submap " << manager->active_submaps[i]->submapIdx << " from active to passive."
-            //               << " With visible_percentage = " << tmp_perct << std::endl;
-            //     manager->activeTOpassiveIdx.push_back(i);
-            // }
-            // if(tmp_perct > max_perct){
-            //     max_perct = tmp_perct;
-            //     max_perct_idx = i;
-            // }
-        }
+        // if(bSubmapping)
+        // {
+        //     // check visible block percentage
+        //     float tmp_perct = manager->CheckVisPercent(i);
+        //     if(tmp_perct < thres_passive){
+        //         std::cout << "Move submap " << manager->active_submaps[i]->submapIdx << " from active to passive."
+        //                   << " With visible_percentage = " << tmp_perct << std::endl;
+        //         manager->activeTOpassiveIdx.push_back(i);
+        //     }
+        //     if(tmp_perct > max_perct){
+        //         max_perct = tmp_perct;
+        //         max_perct_idx = i;
+        //     }
+        // }
     } // end for-active_submaps
 
     /* POST-PROCESSING */
-    if(bSubmapping)
-    {
-        // // deactivate unwanted submaps
-        // if(manager->activeTOpassiveIdx.size()>0)
-        // {
-        //     renderIdx -= manager->activeTOpassiveIdx.size();
-        //     manager->CheckActive();
-        // }
-        // // std::cout << "check new sm/render&track" << std::endl;
-        // // check if new submap is needed
-        // if(max_perct < thres_new_sm)
-        // {
-        //     std::cout << "NEW SUBMAP NEEDED at frame " << current_frame->id << std::endl;
-        //     // int new_map_idx_all = manager->all_submaps.size();
-        //     int new_map_idx_all = manager->active_submaps.size() + manager->passive_submaps.size();
-        //     manager->Create(base, new_map_idx_all, odometry->vModelDeviceMapPyramid[renderIdx], 
-        //                     false, true);
-        //     renderIdx = manager->renderIdx;
-        //     // create_keyframe();
-        //     odometry->vModelDeviceMapPyramid[renderIdx]->downloadVNM(odometry->vModelFrames[renderIdx], odometry->trackingLost);
-        //     manager->AddKeyFrame(current_keyframe);
-        // } 
-        // // check which submap to track and render
-        // else
-        // {
-        //     // std::cout << renderIdx << "-" << odometry->vModelFrames.size() << std::endl;
-        //     manager->CheckTrackAndRender(odometry->vModelFrames[renderIdx]->id, max_perct_idx);
-        // }
-    }
+    // if(bSubmapping)
+    // {
+    //     // deactivate unwanted submaps
+    //     if(manager->activeTOpassiveIdx.size()>0)
+    //     {
+    //         renderIdx -= manager->activeTOpassiveIdx.size();
+    //         manager->CheckActive();
+    //     }
+    //     // std::cout << "check new sm/render&track" << std::endl;
+    //     // check if new submap is needed
+    //     if(max_perct < thres_new_sm)
+    //     {
+    //         std::cout << "NEW SUBMAP NEEDED at frame " << current_frame->id << std::endl;
+    //         // int new_map_idx_all = manager->all_submaps.size();
+    //         int new_map_idx_all = manager->active_submaps.size() + manager->passive_submaps.size();
+    //         manager->Create(base, new_map_idx_all, odometry->vModelDeviceMapPyramid[renderIdx], 
+    //                         false, true);
+    //         renderIdx = manager->renderIdx;
+    //         // create_keyframe();
+    //         odometry->vModelDeviceMapPyramid[renderIdx]->downloadVNM(odometry->vModelFrames[renderIdx], odometry->trackingLost);
+    //         manager->AddKeyFrame(current_keyframe);
+    //     } 
+    //     // check which submap to track and render
+    //     else
+    //     {
+    //         // std::cout << renderIdx << "-" << odometry->vModelFrames.size() << std::endl;
+    //         manager->CheckTrackAndRender(odometry->vModelFrames[renderIdx]->id, max_perct_idx);
+    //     }
+    // }
 
     /* OPTIMIZATION */
     // if (hasNewKeyFrame)
@@ -333,32 +410,34 @@ void System::process_images(const cv::Mat depth, const cv::Mat image,
     //     hasNewKeyFrame = false;
     // }
 
-    if (bRecordSequence)
-    {
-        std::string dir = "/home/yohann/SLAMs/datasets/sequence/";
-        // pose
-        auto pose = odometry->vModelFrames[renderIdx]->pose.cast<float>().matrix();
-        Eigen::Matrix3f rot = pose.topLeftCorner<3,3>();
-        Eigen::Vector3f trans = pose.topRightCorner<3,1>();
-        Eigen::Quaternionf quat(rot);
-        // std::cout << rot << std::endl << trans << std::endl;
-        // std::cout << quat.x() << ", " << quat.y() << ", " << quat.z() << ", " << quat.w() << std::endl;
-        std::string name_pose = dir + "pose.txt";
-        std::ofstream pose_file;
-        pose_file.open(name_pose, std::ios::app);
-        if(pose_file.is_open())
-        {
-            pose_file << odometry->vModelFrames[renderIdx]->id << " " 
-                      << trans(0) << " " << trans(1) << " " << trans(2) << " "
-                      << quat.x() << " " << quat.y() << " " << quat.z() << " " << quat.w()
-                      << "\n";
-        }
-        else
-        {
-            std::cout << "!!!!ERROR: Unable to open the pose file." << std::endl;
-        }
-        pose_file.close();
-    }
+    // if (bRecordSequence)
+    // {
+    //     std::string dir = "/home/yohann/SLAMs/datasets/sequence/";
+    //     // pose
+    //     auto pose = odometry->vModelFrames[renderIdx]->pose.cast<float>().matrix();
+    //     Eigen::Matrix3f rot = pose.topLeftCorner<3,3>();
+    //     Eigen::Vector3f trans = pose.topRightCorner<3,1>();
+    //     Eigen::Quaternionf quat(rot);
+    //     // std::cout << rot << std::endl << trans << std::endl;
+    //     // std::cout << quat.x() << ", " << quat.y() << ", " << quat.z() << ", " << quat.w() << std::endl;
+    //     std::string name_pose = dir + "pose.txt";
+    //     std::ofstream pose_file;
+    //     pose_file.open(name_pose, std::ios::app);
+    //     if(pose_file.is_open())
+    //     {
+    //         pose_file << odometry->vModelFrames[renderIdx]->id << " " 
+    //                   << trans(0) << " " << trans(1) << " " << trans(2) << " "
+    //                   << quat.x() << " " << quat.y() << " " << quat.z() << " " << quat.w()
+    //                   << "\n";
+    //     }
+    //     else
+    //     {
+    //         std::cout << "!!!!ERROR: Unable to open the pose file." << std::endl;
+    //     }
+    //     pose_file.close();
+    // }
+
+    std::cout << "FINISHED current frame.\n" << std::endl;
 
     frame_id += 1;
 }

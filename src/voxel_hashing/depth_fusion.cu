@@ -339,12 +339,14 @@ __global__ void update_map_with_colour_kernel(MapStorage map_struct,
 
         if (voxel.weight == 0)
         {
+            // printf("Initialising map, sdf = %d. \n", sdf);
             voxel.setSDF(sdf);
             voxel.setWeight(weight);
             voxel.rgb = colour_new;
             continue;
         }
 
+        // printf("Fusing depth and color in map. \n");
         // fuse depth
         sdf_p = (sdf_p * weight_p + sdf * weight) / (weight_p + weight);
         voxel.setSDF(sdf_p);
@@ -604,7 +606,8 @@ void update(
         pos_array.get());
 
     visible_block_count = pos_array[state.num_total_hash_entries_ - 1];
-
+    
+    printf("visible_block_count = %d\n", visible_block_count);
     if (visible_block_count == 0)
         return;
 

@@ -5,6 +5,7 @@ namespace fusion
 
 FUSION_HOST void build_intensity_pyr(cv::cuda::GpuMat base, std::vector<cv::cuda::GpuMat> &pyr, const int level)
 {
+    pyr.clear();
     if (pyr.size() != level)
         pyr.resize(level);
 
@@ -19,6 +20,8 @@ FUSION_HOST void build_intensity_dxdy_pyr(std::vector<cv::cuda::GpuMat> intensit
                                           std::vector<cv::cuda::GpuMat> &dx_pyr, 
                                           std::vector<cv::cuda::GpuMat> &dy_pyr)
 {
+    dx_pyr.clear();
+    dy_pyr.clear();
     if (dx_pyr.size() != intensity_pyr.size())
         dx_pyr.resize(intensity_pyr.size());
 
@@ -33,6 +36,7 @@ FUSION_HOST void build_intensity_dxdy_pyr(std::vector<cv::cuda::GpuMat> intensit
 
 FUSION_HOST void build_depth_pyr(cv::cuda::GpuMat base, std::vector<cv::cuda::GpuMat> &pyr, const int level)
 {
+    pyr.clear();
     if (pyr.size() != level)
         pyr.resize(level);
 
@@ -48,6 +52,8 @@ FUSION_HOST void build_vnmap_pyr(std::vector<cv::cuda::GpuMat> depth_pyr,
                                  std::vector<cv::cuda::GpuMat> &nmap_pyr,
                                  const std::vector<Eigen::Matrix3f> KInv_pyr)
 {
+    vmap_pyr.clear();
+    nmap_pyr.clear();
     if (vmap_pyr.size() != depth_pyr.size())
         vmap_pyr.resize(depth_pyr.size());
 
@@ -66,17 +72,19 @@ FUSION_HOST void build_vmap_pyr(std::vector<cv::cuda::GpuMat> depth_pyr,
                                 std::vector<cv::cuda::GpuMat> vmap_pyr, 
                                 const std::vector<Eigen::Matrix3f> KInv_pyr)
 {
-    if (vmap_pyr.size() != depth_pyr.size())
-        vmap_pyr.resize(depth_pyr.size());
+    std::cout << "Empty build vmap pyr function. " << std::endl;
+    // if (vmap_pyr.size() != depth_pyr.size())
+    //     vmap_pyr.resize(depth_pyr.size());
 
-    for (int i = 0; i < depth_pyr.size(); ++i)
-    {
-        backProjectDepth(depth_pyr[i], vmap_pyr[i], KInv_pyr[i]);
-    }
+    // for (int i = 0; i < depth_pyr.size(); ++i)
+    // {
+    //     backProjectDepth(depth_pyr[i], vmap_pyr[i], KInv_pyr[i]);
+    // }
 }
 
 FUSION_HOST void build_vmap_pyr(cv::cuda::GpuMat base, std::vector<cv::cuda::GpuMat> &vmap_pyr, const int level)
 {
+    vmap_pyr.clear();   
     if (vmap_pyr.size() != level)
         vmap_pyr.resize(level);
 
@@ -90,6 +98,7 @@ FUSION_HOST void build_vmap_pyr(cv::cuda::GpuMat base, std::vector<cv::cuda::Gpu
 FUSION_HOST void build_nmap_pyr(std::vector<cv::cuda::GpuMat> vmap_pyr, 
                                 std::vector<cv::cuda::GpuMat> &nmap_pyr)
 {
+    nmap_pyr.clear();
     if (nmap_pyr.size() != vmap_pyr.size())
         nmap_pyr.resize(vmap_pyr.size());
 

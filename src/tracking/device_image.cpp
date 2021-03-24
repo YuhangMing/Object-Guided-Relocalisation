@@ -270,8 +270,9 @@ cv::cuda::GpuMat DeviceImage::get_rendered_image_raw()
 //     resize_pyramid(max_level);
 // }
 
-void DeviceImage::resize_device_map()
+void DeviceImage::resize_device_map(cv::cuda::GpuMat cuVMap)
 {
+    vmap_pyr[0] = cuVMap;
     // re-calculate v & n pyramid given rendered 
     for (int i = 1; i < vmap_pyr.size(); ++i)
     {

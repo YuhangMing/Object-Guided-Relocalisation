@@ -40,7 +40,12 @@ public:
   // Eigen::Matrix4f get_current_pose_matrix() const;
   std::shared_ptr<DeviceImage> get_current_image() const;
   std::shared_ptr<DeviceImage> get_reference_image(int i) const;
-
+  cv::cuda::GpuMat get_current_color();
+  cv::cuda::GpuMat get_current_depth();
+  cv::cuda::GpuMat get_current_vmap(const int &level = 0);
+  cv::cuda::GpuMat get_current_nmap(const int &level = 0);
+  void update_reference_model(cv::cuda::GpuMat vmap);
+  
   // submap related
   void SetManager(std::shared_ptr<SubMapManager> pManager);
   void setSubmapIdx(int idx);

@@ -35,7 +35,6 @@ public:
   // TrackingResult compute_transform_depth_centroids(const RgbdImagePtr reference, const RgbdImagePtr current, const TrackingContext &c);
 
   TrackingResult compute_transform(const TrackingContext &c);
-  void swap_intensity_pyr();
   void set_source_image(cv::Mat img, const int num_pyr);
   void set_source_intensity(cv::cuda::GpuMat intensity, const int num_pyr);
   void set_source_depth(cv::Mat depth, const std::vector<Eigen::Matrix3f> KInv_pyr);
@@ -43,19 +42,22 @@ public:
   void set_reference_image(cv::Mat img, const int num_pyr);
   void set_reference_intensity(cv::cuda::GpuMat intensity, const int num_pyr);
   void set_reference_depth(cv::Mat depth, const std::vector<Eigen::Matrix3f> KInv_pyr);
-  // void set_reference_vmap(cv::cuda::GpuMat vmap);
+  void update_reference_vnmap(cv::cuda::GpuMat vmap);
+  void update_ref_with_src(bool bIntensity=true, bool bImg=false, bool bDepth=false);
 
-  cv::cuda::GpuMat get_vmap_src(const int &level = 0);
-  cv::cuda::GpuMat get_nmap_src(const int &level = 0);
-  cv::cuda::GpuMat get_depth_src(const int &level = 0);
+  cv::cuda::GpuMat get_image_src();
   cv::cuda::GpuMat get_intensity_src(const int &level = 0);
   cv::cuda::GpuMat get_intensity_dx(const int &level = 0);
   cv::cuda::GpuMat get_intensity_dy(const int &level = 0);
+  cv::cuda::GpuMat get_depth_src(const int &level = 0);
+  cv::cuda::GpuMat get_vmap_src(const int &level = 0);
+  cv::cuda::GpuMat get_nmap_src(const int &level = 0);
+  cv::cuda::GpuMat get_intensity_ref(const int &level = 0);
   cv::cuda::GpuMat get_vmap_ref(const int &level = 0);
   cv::cuda::GpuMat get_nmap_ref(const int &level = 0);
-  cv::cuda::GpuMat get_intensity_ref(const int &level = 0);
-
+  
 private:
+  cv::cuda::GpuMat src_image, ref_image;
   std::vector<cv::cuda::GpuMat> intensity_src_pyr;
   std::vector<cv::cuda::GpuMat> intensity_dx_pyr;
   std::vector<cv::cuda::GpuMat> intensity_dy_pyr;

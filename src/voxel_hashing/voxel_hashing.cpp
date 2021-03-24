@@ -107,7 +107,7 @@ void DenseMapping::raycast(
   if (count_visible_block == 0)
     return;
 
-  // std::cout << "creating rendering blocks" << std::endl;
+  std::cout << "creating rendering blocks" << std::endl;
   cuda::create_rendering_blocks(
       count_visible_block,
       count_rendering_block,
@@ -121,7 +121,7 @@ void DenseMapping::raycast(
   if (count_rendering_block != 0)
   {
 
-    // std::cout << "raycasting" << std::endl;
+    std::cout << "raycasting with " << count_rendering_block << " rendering block." << std::endl;
     cuda::raycast_with_colour(
         device_map.map,
         device_map.state,

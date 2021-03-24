@@ -47,6 +47,7 @@ int main(int argc, char **argv)
                 window.SetDetectedSource(slam.get_detected_image());
                 window.SetRenderScene(slam.get_rendered_scene());
                 */
+               
                 window.SetCurrentCamera(slam.get_camera_pose());
                 window.mbFlagUpdateMesh = true;
 
@@ -55,7 +56,6 @@ int main(int argc, char **argv)
                     std::cout << "ALL IMAGES LOADED !!!!" << std::endl;
                     window.SetPause();
                 }
-
             }
 
             // if (window.IsPaused() && window.mbFlagUpdateMesh)

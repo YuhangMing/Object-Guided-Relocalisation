@@ -295,6 +295,7 @@ struct MapRenderingDelegate
         findVoxel(map_struct, ToVector3i(pt3d), voxel);
         if (voxel && voxel->weight != 0)
         {
+            // printf("Voxel found.\n");
             valid = true;
             return voxel->getSDF();
         }
@@ -383,13 +384,19 @@ struct MapRenderingDelegate
         bool found_pt = false;
         float step;
 
+        // printf("dist_s = %f, dist_e = %f\n", dist_s, dist_e);
+
         while (dist_s < dist_e)
         {
             last_sdf = sdf;
             sdf = read_sdf(result, valid_sdf);
+            // if(!isnan(sdf))
+            //     printf("sdf = %f\n", sdf);
 
             if (sdf <= 0.5f && sdf >= -0.5f)
                 sdf = read_sdf_interped(result, valid_sdf);
+            // if(!isnan(sdf))
+            //     printf("sdf = %f\n", sdf);
 
             if (sdf <= 0.0f)
                 break;
@@ -401,20 +408,26 @@ struct MapRenderingDelegate
                 step = max(sdf * param.raycast_step_scale(), 1.0f);
             else
                 step = 2;
-
+            // if(valid_sdf)
+            //     printf("%f\n", step);
             result += step * dir;
             dist_s += step;
         }
 
+        // if(!isnan(sdf) && sdf<=0.0f)
+        //     printf("sdf: %f, sdf*scale: %f\n", sdf, sdf*param.raycast_step_scale());
         if (sdf <= 0.0f)
         {
             step = sdf * param.raycast_step_scale();
             result += step * dir;
+            // printf("%f, %f, %f, %f\n", step, result.x, result.y, result.z);
 
             sdf = read_sdf_interped(result, valid_sdf);
 
             step = sdf * param.raycast_step_scale();
             result += step * dir;
+
+            // printf("sdf = %f, valid = %d, resutl = (%f, %f, %f)\n", sdf, valid_sdf, result.x, result.y, result.z);
 
             if (valid_sdf)
                 found_pt = true;
@@ -425,6 +438,7 @@ struct MapRenderingDelegate
             if(valid_mask)
                 mask.ptr(y)[x] = read_label(result);
             result = inv_pose(result * param.voxel_size);
+            // printf("%f, %f, %f\n", result.x, result.y, result.z);
             vmap.ptr(y)[x] = Vector4f(result.x, result.y, result.z, 1.0);
         }
     }
