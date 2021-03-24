@@ -75,7 +75,7 @@ struct Config
     // int mFastMinTh = 7;
     // float mfScaleFactor = 1.2;
 
-    bool bEnableViewer = true;
+    bool bEnableViewer = false;
 
     int mMinImageWidth = 0;
     int mMaxImageWidth = 640;

@@ -8,7 +8,6 @@
 #include <sophus/se3.hpp>
 #include <opencv2/opencv.hpp>
 #include <opencv2/cudaarithm.hpp>
-#include "data_struct/map_point.h"
 #include "data_struct/map_cuboid.h"
 #include "data_struct/map_object.h"
 #include "detection/detector.h"
@@ -25,11 +24,6 @@ public:
   RgbdFrame(const cv::Mat &depth, const cv::Mat &image, const size_t id, const double ts);
   RgbdFrame();
   void copyTo(RgbdFramePtr dst);
-
-  std::vector<cv::KeyPoint> cv_key_points;
-  std::vector<std::shared_ptr<Point3d>> key_points;
-  std::map<RgbdFramePtr, Eigen::Matrix4f> neighbours;
-  cv::Mat descriptors;
 
   std::size_t id;
   double timeStamp;

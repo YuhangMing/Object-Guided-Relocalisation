@@ -1,4 +1,4 @@
-#include "map_manager.h"
+#include "mapping/SubmapManager.h"
 #include "data_struct/map_cuboid.h"
 #include "utils/settings.h"
 #include <ctime>
@@ -6,65 +6,95 @@
 namespace fusion
 {
 
-SubMapManager::SubMapManager() : bKFCreated(false) {
-	ResetSubmaps();
+SubmapManager::SubmapManager() : bKFCreated(false) {
+	// maxNumTriangle
+	pMesher = new MeshEngine(20000000);
+	pRayTracer = new RayTraceEngine(GlobalCfg.width, GlobalCfg.height, GlobalCfg.K);
 }
 
-void SubMapManager::Create(int submapIdx, bool bTrack, bool bRender)
+SubmapManager::~SubmapManager()
+{
+	delete pMesher;
+	delete pRayTracer;
+	for(size_t i=0; i<vActiveSubmaps.size(); ++i)
+	{
+		delete vActiveSubmaps[i];
+	}
+}
+
+void SubmapManager::Create(int submapIdx, bool bTrack, bool bRender)
 {
 	std::cout << "Create submap no. " << submapIdx << std::endl;
 
-	auto submap = std::make_shared<DenseMapping>(GlobalCfg.K, GlobalCfg.width, GlobalCfg.height,
-												 submapIdx, bTrack, bRender);
-	submap->poseGlobal = Sophus::SE3d();	// set to identity
-	active_submaps.push_back(submap);
+	auto pDenseMap = new MapStruct(GlobalCfg.K);
+	pDenseMap->SetMeshEngine(pMesher);
+	pDenseMap->SetTracer(pRayTracer);
+	// hashTableSize, bucketSize, voxelBlockSize, voxelSize, truncationDist
+	// pDenseMap->create(12000, 10000, 9000, 0.01, 0.1);
+	// state.num_total_buckets_ = 50000;
+    // state.num_total_hash_entries_ = 62500;
+    // state.num_total_voxel_blocks_ = 50000;
+    // state.num_max_rendering_blocks_ = 25000;
+    // state.num_max_mesh_triangles_ = 5000000;
+	pDenseMap->create(62500, 50000, 50000, 0.004, 0.012);
+	pDenseMap->reset();
+	pDenseMap->SetPose(Sophus::SE3d());
+
+	vActiveSubmaps.push_back((pDenseMap));
+
+	// auto submap = std::make_shared<DenseMapping>(GlobalCfg.K, GlobalCfg.width, GlobalCfg.height,
+	// 											 submapIdx, bTrack, bRender);
+	// submap->poseGlobal = Sophus::SE3d();	// set to identity
+	// active_submaps.push_back(submap);
 
 	bHasNewSM = false;
 	renderIdx = submapIdx;
 	ref_frame_id = 0;
 }
 
-void SubMapManager::Create(int submapIdx, RgbdImagePtr ref_img, bool bTrack, bool bRender)
+
+void SubmapManager::ResetSubmaps(){
+	// for(size_t i=0; i < active_submaps.size(); i++){
+	// 	active_submaps[i]->reset_mapping();
+	// }
+	// for(size_t i=0; i < passive_submaps.size(); i++){
+	// 	passive_submaps[i]->reset_mapping();
+	// }
+
+	// // submap storage
+	// active_submaps.clear();
+	// passive_submaps.clear();
+	// activeTOpassiveIdx.clear();
+}
+
+void SubmapManager::Create(int submapIdx, RgbdImagePtr ref_img, bool bTrack, bool bRender)
 {
-	std::cout << "Create submap no. " << submapIdx << std::endl;
+	// std::cout << "Create submap no. " << submapIdx << std::endl;
 
-	auto ref_frame = ref_img->get_reference_frame();
-	// create new submap
-	auto submap = std::make_shared<DenseMapping>(GlobalCfg.K, GlobalCfg.width, GlobalCfg.height,
-												 submapIdx, bTrack, bRender);
-	submap->poseGlobal = active_submaps[renderIdx]->poseGlobal * ref_frame->pose;
-	// store new submap
-	active_submaps.push_back(submap);
-	// stop previous rendering submap from fusing depth info
-	active_submaps[renderIdx]->bRender = false;
+	// auto ref_frame = ref_img->get_reference_frame();
+	// // create new submap
+	// auto submap = std::make_shared<DenseMapping>(GlobalCfg.K, GlobalCfg.width, GlobalCfg.height,
+	// 											 submapIdx, bTrack, bRender);
+	// submap->poseGlobal = active_submaps[renderIdx]->poseGlobal * ref_frame->pose;
+	// // store new submap
+	// active_submaps.push_back(submap);
+	// // stop previous rendering submap from fusing depth info
+	// active_submaps[renderIdx]->bRender = false;
 
-	// create new model frame for tracking and rendering
-	auto model_i = std::make_shared<DeviceImage>(ref_img->vKInv);
-	copyDeviceImage(ref_img, model_i);
-	auto model_f = model_i->get_reference_frame();	// new frame created when perform copy above, new pointer here
-	model_f->pose = Sophus::SE3d();	// every new submap starts its own reference coordinate system
-	odometry->vModelFrames.push_back(model_f);
-	odometry->vModelDeviceMapPyramid.push_back(model_i);
+	// // create new model frame for tracking and rendering
+	// auto model_i = std::make_shared<DeviceImage>(ref_img->vKInv);
+	// copyDeviceImage(ref_img, model_i);
+	// auto model_f = model_i->get_reference_frame();	// new frame created when perform copy above, new pointer here
+	// model_f->pose = Sophus::SE3d();	// every new submap starts its own reference coordinate system
+	// odometry->vModelFrames.push_back(model_f);
+	// odometry->vModelDeviceMapPyramid.push_back(model_i);
 
-	// some other parameters
-	bHasNewSM = true;
-	renderIdx = active_submaps.size()-1;
-	ref_frame_id = ref_frame->id;
+	// // some other parameters
+	// bHasNewSM = true;
+	// renderIdx = active_submaps.size()-1;
+	// ref_frame_id = ref_frame->id;
 }
 
-void SubMapManager::ResetSubmaps(){
-	for(size_t i=0; i < active_submaps.size(); i++){
-		active_submaps[i]->reset_mapping();
-	}
-	for(size_t i=0; i < passive_submaps.size(); i++){
-		passive_submaps[i]->reset_mapping();
-	}
-
-	// submap storage
-	active_submaps.clear();
-	passive_submaps.clear();
-	activeTOpassiveIdx.clear();
-}
 
 /* Submapping disabled for now, need to be rewritten
 float SubMapManager::CheckVisPercent(int submapIdx){
@@ -405,7 +435,7 @@ void SubMapManager::SetTracker(std::shared_ptr<DenseOdometry> pOdometry){
 }
 */
 
-void SubMapManager::readSMapFromDisk(std::string file_name)
+void SubmapManager::readSMapFromDisk(std::string file_name)
 {
 	// // semantic map
 	// for(size_t idx=1; idx<7; ++idx){

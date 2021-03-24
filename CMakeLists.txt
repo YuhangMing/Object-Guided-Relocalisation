@@ -74,12 +74,10 @@ PUBLIC
 target_sources(fusion
 PRIVATE
     src/system.cpp
-    src/map_manager.cpp
 
     src/utils/settings.cpp
     
     src/data_struct/rgbd_frame.cpp
-    src/data_struct/map_struct.cu
     src/data_struct/map_cuboid.cpp
     src/data_struct/map_object.cpp
 
@@ -90,15 +88,15 @@ PRIVATE
     src/tracking/pose_estimator.cu
     src/tracking/build_pyramid.cpp
 
+    src/mapping/SubmapManager.cpp
+    src/mapping/VoxelMap.cu
+    src/mapping/RayTraceEngine.cu
+    src/mapping/MeshEngine.cu
+
     src/relocalization/ransac_ao.cpp
     src/relocalization/relocalizer.cpp
 
     src/visualization/main_window.cpp
-
-    src/voxel_hashing/voxel_hashing.cpp
-    src/voxel_hashing/depth_fusion.cu
-    src/voxel_hashing/ray_tracing.cu
-    src/voxel_hashing/scene_mesh.cu
 
     src/input/tum_loader.cpp
     src/input/azure.cpp

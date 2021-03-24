@@ -2,7 +2,6 @@
 #define SLAM_RELOCALIZER_H
 
 #include "data_struct/rgbd_frame.h"
-#include "data_struct/map_point.h"
 #include "data_struct/map_cuboid.h"
 #include "data_struct/map_object.h"
 

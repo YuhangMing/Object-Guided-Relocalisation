@@ -1,7 +1,11 @@
 #ifndef SLAM_POSE_ESTIMATOR_H
 #define SLAM_POSE_ESTIMATOR_H
 
-#include "data_struct/map_point.h"
+#include <stdlib.h>
+#include <vector>
+#include <iostream>
+#include <Eigen/Dense>
+#include <Eigen/Eigenvalues>
 
 namespace fusion
 {

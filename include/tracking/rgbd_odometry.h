@@ -5,16 +5,14 @@
 #include "tracking/device_image.h"
 #include "tracking/icp_tracker.h"
 #include "tracking/cuda_imgproc.h"
-#include "voxel_hashing/voxel_hashing.h"
-#include "map_manager.h"
+#include "mapping/SubmapManager.h"
 #include "detection/detector.h"
 #include <memory>
 
 namespace fusion
 {
 
-class SubMapManager;
-class DenseMapping;
+class SubmapManager;
 // class MaskRCNN;
 
 class DenseOdometry
@@ -47,7 +45,7 @@ public:
   void update_reference_model(cv::cuda::GpuMat vmap);
   
   // submap related
-  void SetManager(std::shared_ptr<SubMapManager> pManager);
+  void SetManager(std::shared_ptr<SubmapManager> pManager);
   void setSubmapIdx(int idx);
   void setTrackIdx(int idx);
 
@@ -70,7 +68,7 @@ private:
   TrackingContext context;
 
   // submap related
-  std::shared_ptr<SubMapManager> manager;
+  std::shared_ptr<SubmapManager> manager;
   int submapIdx;    // index of current processing submap (among active submaps)
   int trackIdx;     // index of last rendered submap (among active submaps)
 

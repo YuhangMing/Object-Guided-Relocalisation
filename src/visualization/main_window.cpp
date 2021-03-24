@@ -4,20 +4,20 @@
 
 MainWindow::~MainWindow()
 {
-    delete keypoints;
+    // delete keypoints;
     pangolin::DestroyWindow(WindowName);
     std::cout << "opengl released. " << std::endl;
 }
 
 MainWindow::MainWindow(const char *name, size_t width, size_t height, bool bDisplay)
     : mbFlagRestart(false), WindowName(name), mbFlagUpdateMesh(false),
-      VERTEX_COUNT(0), MAX_VERTEX_COUNT(20000000), sizeKeyPoint(0),
-      maxSizeKeyPoint(8000000)
+      VERTEX_COUNT(0), MAX_VERTEX_COUNT(20000000)
+    //   , sizeKeyPoint(0),maxSizeKeyPoint(8000000)
 {
     ResetAllFlags();
 
     pangolin::CreateWindowAndBind(WindowName, width, height);
-    keypoints = (float *)malloc(sizeof(float) * maxSizeKeyPoint);
+    // keypoints = (float *)malloc(sizeof(float) * maxSizeKeyPoint);
 
     SetupGLFlags();
     SetupDisplays();
@@ -29,8 +29,8 @@ MainWindow::MainWindow(const char *name, size_t width, size_t height, bool bDisp
     cIndicator = 1;
     nIndicator = 0;
 
-    bDisplayOtherPoses = bDisplay;
-    bRecording = false;
+    // bDisplayOtherPoses = bDisplay;
+    // bRecording = false;
 }
 
 void MainWindow::SetupGLFlags()
@@ -38,145 +38,6 @@ void MainWindow::SetupGLFlags()
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_BLEND);
     // glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-}
-
-void MainWindow::InitTextures()
-{
-    TextureRGB.Reinitialise(
-        640, 480,
-        GL_RGB,
-        true,
-        0,
-        GL_RGB,
-        GL_UNSIGNED_BYTE,
-        NULL);
-
-    TextureDepth.Reinitialise(
-        640, 480,
-        GL_LUMINANCE,
-        true,
-        0,
-        GL_LUMINANCE,
-        GL_UNSIGNED_BYTE,
-        NULL);
-
-    /* Semantic & Reloc diasbled for now
-    TextureDetected.Reinitialise(
-        640, 480,
-        GL_RGB,
-        true,
-        0,
-        GL_RGB,
-        GL_UNSIGNED_BYTE,
-        NULL);
-
-    TextureScene.Reinitialise(
-        640, 480,
-        GL_RGBA,
-        true,
-        0,
-        GL_RGBA,
-        GL_UNSIGNED_BYTE,
-        NULL);
-
-    TextureNOCSMap.Reinitialise(
-        640, 480,
-        GL_RGB,
-        true,
-        0,
-        GL_RGB,
-        GL_UNSIGNED_BYTE,
-        NULL);
-
-    TextureMask.Reinitialise(
-        640, 480,
-        GL_LUMINANCE,
-        true,
-        0,
-        GL_LUMINANCE,
-        GL_UNSIGNED_BYTE,
-        NULL);
-    */
-}
-
-void MainWindow::InitMeshBuffers()
-{
-    auto size = sizeof(float) * 3 * MAX_VERTEX_COUNT;
-
-    BufferVertex.Reinitialise(
-        pangolin::GlArrayBuffer,
-        size,
-        cudaGLMapFlagsWriteDiscard,
-        GL_STATIC_DRAW);
-
-    BufferNormal.Reinitialise(
-        pangolin::GlArrayBuffer,
-        size,
-        cudaGLMapFlagsWriteDiscard,
-        GL_STATIC_DRAW);
-
-    BufferColour.Reinitialise(
-        pangolin::GlArrayBuffer,
-        size,
-        cudaGLMapFlagsWriteDiscard,
-        GL_STATIC_DRAW);
-
-    MappedVertex = std::make_shared<pangolin::CudaScopedMappedPtr>(BufferVertex);
-    MappedNormal = std::make_shared<pangolin::CudaScopedMappedPtr>(BufferNormal);
-    MappedColour = std::make_shared<pangolin::CudaScopedMappedPtr>(BufferColour);
-
-    glGenVertexArrays(1, &VAOShade);
-    glBindVertexArray(VAOShade);
-
-    BufferVertex.Bind();
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-    glEnableVertexAttribArray(0);
-
-    BufferNormal.Bind();
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
-    glEnableVertexAttribArray(1);
-
-    glGenVertexArrays(1, &VAOColour);
-    glBindVertexArray(VAOColour);
-
-    BufferVertex.Bind();
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-    glEnableVertexAttribArray(0);
-
-    BufferColour.Bind();
-    glVertexAttribPointer(2, 3, GL_UNSIGNED_BYTE, GL_TRUE, 0, 0);
-    glEnableVertexAttribArray(2);
-
-    // previous buffers are unbinded automatically when binding next buffer.
-    // so only last one need to call Unbind explicitly
-    BufferColour.Unbind();
-    glBindVertexArray(0);
-}
-
-bool MainWindow::IsPaused()
-{
-    return *BoxPaused;
-}
-
-void MainWindow::InitGlSlPrograms()
-{
-    ShadingProg.AddShaderFromFile(
-        pangolin::GlSlShaderType::GlSlVertexShader,
-        "./glsl_shader/phong.vert");
-
-    ShadingProg.AddShaderFromFile(
-        pangolin::GlSlShaderType::GlSlFragmentShader,
-        "./glsl_shader/direct_output.frag");
-
-    ShadingProg.Link();
-
-    ShadingColorProg.AddShaderFromFile(
-        pangolin::GlSlShaderType::GlSlVertexShader,
-        "./glsl_shader/colour.vert");
-    ShadingColorProg.AddShaderFromFile(
-        pangolin::GlSlShaderType::GlSlFragmentShader,
-        "./glsl_shader/direct_output.frag");
-    ShadingColorProg.Link();
 }
 
 void MainWindow::SetupDisplays()
@@ -202,7 +63,7 @@ void MainWindow::SetupDisplays()
     // BoxDisplayDetected = std::make_shared<pangolin::Var<bool>>("Menu.Detected Result", true, true);
     
     // display name, current val, min, max;
-    BarSwitchMap = std::make_shared<pangolin::Var<int>>("Menu.Display Map", 2, 0, 2);
+    BarSwitchMap = std::make_shared<pangolin::Var<int>>("Menu.Display Map", 1, 0, 2);
     BoxDisplayCamera = std::make_shared<pangolin::Var<bool>>("Menu.Current Camera", true, true);
     
     /* Semantic disabled for now
@@ -266,6 +127,146 @@ void MainWindow::RegisterKeyCallback()
     //! Load Maps
     pangolin::RegisterKeyPressCallback('l', pangolin::SetVarFunctor<bool>("Menu.Read Map", true));
     pangolin::RegisterKeyPressCallback('L', pangolin::SetVarFunctor<bool>("Menu.Read Map", true));
+}
+
+void MainWindow::InitTextures()
+{
+    TextureRGB.Reinitialise(
+        640, 480,
+        GL_RGB,
+        true,
+        0,
+        GL_RGB,
+        GL_UNSIGNED_BYTE,
+        NULL);
+
+    TextureDepth.Reinitialise(
+        640, 480,
+        GL_LUMINANCE,
+        true,
+        0,
+        GL_LUMINANCE,
+        GL_UNSIGNED_BYTE,
+        NULL);
+
+    /* Semantic & Reloc diasbled for now
+    TextureDetected.Reinitialise(
+        640, 480,
+        GL_RGB,
+        true,
+        0,
+        GL_RGB,
+        GL_UNSIGNED_BYTE,
+        NULL);
+
+    TextureScene.Reinitialise(
+        640, 480,
+        GL_RGBA,
+        true,
+        0,
+        GL_RGBA,
+        GL_UNSIGNED_BYTE,
+        NULL);
+
+    TextureNOCSMap.Reinitialise(
+        640, 480,
+        GL_RGB,
+        true,
+        0,
+        GL_RGB,
+        GL_UNSIGNED_BYTE,
+        NULL);
+
+    TextureMask.Reinitialise(
+        640, 480,
+        GL_LUMINANCE,
+        true,
+        0,
+        GL_LUMINANCE,
+        GL_UNSIGNED_BYTE,
+        NULL);
+    */
+}
+
+// NEED THIS ONE?????? -------------------------------------------------------
+void MainWindow::InitMeshBuffers()
+{
+    auto size = sizeof(float) * 3 * MAX_VERTEX_COUNT;
+
+    BufferVertex.Reinitialise(
+        pangolin::GlArrayBuffer,
+        size,
+        cudaGLMapFlagsWriteDiscard,
+        GL_STATIC_DRAW);
+
+    BufferNormal.Reinitialise(
+        pangolin::GlArrayBuffer,
+        size,
+        cudaGLMapFlagsWriteDiscard,
+        GL_STATIC_DRAW);
+
+    BufferColour.Reinitialise(
+        pangolin::GlArrayBuffer,
+        size,
+        cudaGLMapFlagsWriteDiscard,
+        GL_STATIC_DRAW);
+
+    MappedVertex = std::make_shared<pangolin::CudaScopedMappedPtr>(BufferVertex);
+    MappedNormal = std::make_shared<pangolin::CudaScopedMappedPtr>(BufferNormal);
+    MappedColour = std::make_shared<pangolin::CudaScopedMappedPtr>(BufferColour);
+
+    glGenVertexArrays(1, &VAOShade);
+    glBindVertexArray(VAOShade);
+
+    BufferVertex.Bind();
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+    glEnableVertexAttribArray(0);
+
+    BufferNormal.Bind();
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
+    glEnableVertexAttribArray(1);
+
+    glGenVertexArrays(1, &VAOColour);
+    glBindVertexArray(VAOColour);
+
+    BufferVertex.Bind();
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+    glEnableVertexAttribArray(0);
+
+    BufferColour.Bind();
+    glVertexAttribPointer(2, 3, GL_UNSIGNED_BYTE, GL_TRUE, 0, 0);
+    glEnableVertexAttribArray(2);
+
+    // previous buffers are unbinded automatically when binding next buffer.
+    // so only last one need to call Unbind explicitly
+    BufferColour.Unbind();
+    glBindVertexArray(0);
+}
+
+void MainWindow::InitGlSlPrograms()
+{
+    ShadingProg.AddShaderFromFile(
+        pangolin::GlSlShaderType::GlSlVertexShader,
+        "./glsl_shader/phong.vert");
+
+    ShadingProg.AddShaderFromFile(
+        pangolin::GlSlShaderType::GlSlFragmentShader,
+        "./glsl_shader/direct_output.frag");
+
+    ShadingProg.Link();
+
+    ShadingColorProg.AddShaderFromFile(
+        pangolin::GlSlShaderType::GlSlVertexShader,
+        "./glsl_shader/colour.vert");
+    ShadingColorProg.AddShaderFromFile(
+        pangolin::GlSlShaderType::GlSlFragmentShader,
+        "./glsl_shader/direct_output.frag");
+    ShadingColorProg.Link();
+}
+
+bool MainWindow::IsPaused()
+{
+    return *BoxPaused;
 }
 
 void MainWindow::SetPause()
@@ -402,13 +403,13 @@ void MainWindow::Render()
     switch (*BarSwitchMap)
     {
         case 2:
-            if(cIndicator == 0)
-            {
-                UpdateMeshWithColour();
-                cIndicator++;
-                nIndicator = 0;
-            }
-            DrawMeshColoured();
+            // if(cIndicator == 0)
+            // {
+            //     UpdateMeshWithColour();
+            //     cIndicator++;
+            //     nIndicator = 0;
+            // }
+            // DrawMeshColoured();
             break;
         case 1:
             if(nIndicator == 0)
@@ -973,11 +974,11 @@ void MainWindow::Render()
 
 void MainWindow::UpdateMeshWithNormal()
 {
+    // Main
     auto *vertex = GetMappedVertexBuffer();
     auto *normal = GetMappedNormalBuffer();
     VERTEX_COUNT = slam->fetch_mesh_with_normal(vertex, normal);
 }
-
 void MainWindow::DrawMeshShaded()
 {
     if (VERTEX_COUNT == 0)
@@ -1000,7 +1001,6 @@ void MainWindow::UpdateMeshWithColour()
     auto *colour = GetMappedColourBuffer();
     VERTEX_COUNT = slam->fetch_mesh_with_colour(vertex, colour);
 }
-
 void MainWindow::DrawMeshColoured()
 {
     if (VERTEX_COUNT == 0)

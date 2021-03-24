@@ -38,7 +38,7 @@ System::System(bool bSemantic, bool bLoadSMap)
         total_0 = (uint)total_t0/1048576.0 ;
         free_1 = (uint)free_t0/1048576.0 ;
     #endif
-    manager = std::make_shared<SubMapManager>();
+    manager = std::make_shared<SubmapManager>();
     manager->Create(0, true, true);
     // manager->SetTracker(odometry);
     odometry->SetManager(manager);
@@ -179,7 +179,7 @@ void System::process_images(const cv::Mat depth, const cv::Mat image,
 
     std::cout << "Frame #" << frame_id << std::endl;
     // In tracking and Mapping, loop through all active submaps
-    for(size_t i=0; i<manager->active_submaps.size(); ++i)
+    for(size_t i=0; i<manager->vActiveSubmaps.size(); ++i)
     {
         odometry->setSubmapIdx(i);
 
@@ -259,22 +259,25 @@ void System::process_images(const cv::Mat depth, const cv::Mat image,
             
             // update the map
             std::cout << "Map fusing" << std::endl;
-            manager->active_submaps[i]->update(cuDepth, cuImage, Tcm);
+            // manager->active_submaps[i]->update(cuDepth, cuImage, Tcm);
+            manager->vActiveSubmaps[i]->Fuse(cuDepth, Tcm);
 
             std::cout << "Raytracing " << std::endl;
-            // cv::Mat test_vmap, test_nmap;
-            // cuVMap.download(test_vmap);
+            cv::Mat test_vmap, test_nmap;
+            cuVMap.download(test_vmap);
             // cuNMap.download(test_nmap);
-            manager->active_submaps[i]->raycast(cuVMap, cuImage, Tcm);
-            // cv::Mat test_raycasted_vmap;
-            // cuVMap.download(test_raycasted_vmap);
-            // // cv::imshow("nmap before raycast", test_nmap);
-            // // cv::imshow("vmap before raycast", test_vmap);
-            // // cv::imshow("vmap after raycast", test_raycasted_vmap);
-            // // cv::waitKey(0);
+            // manager->active_submaps[i]->raycast(cuVMap, cuImage, Tcm);
+            manager->vActiveSubmaps[i]->RayTrace(Tcm);
+            cuVMap = manager->vActiveSubmaps[i]->GetRayTracingResult();
             
             auto reference_image = odometry->get_reference_image(i);
             reference_image->resize_device_map(cuVMap); 
+            cv::Mat test_raycasted_vmap;
+            cuVMap.download(test_raycasted_vmap);
+            // cv::imshow("nmap before raycast", test_nmap);
+            cv::imshow("vmap before raycast", test_vmap);
+            cv::imshow("vmap after raycast", test_raycasted_vmap);
+            cv::waitKey(0);
 
             // auto reference_image = odometry->get_reference_image(i);
             // auto reference_frame = reference_image->get_reference_frame();
@@ -464,17 +467,17 @@ void System::save_mesh_to_file(const char *str)
 
 size_t System::fetch_mesh_vertex_only(float *vertex)
 {
-    return manager->active_submaps[renderIdx]->fetch_mesh_vertex_only(vertex);
+    // return manager->active_submaps[renderIdx]->fetch_mesh_vertex_only(vertex);
 }
 
 size_t System::fetch_mesh_with_normal(float *vertex, float *normal)
 {
-    return manager->active_submaps[renderIdx]->fetch_mesh_with_normal(vertex, normal);
+    // return manager->active_submaps[renderIdx]->fetch_mesh_with_normal(vertex, normal);
 }
 
 size_t System::fetch_mesh_with_colour(float *vertex, unsigned char *colour)
 {
-    return manager->active_submaps[renderIdx]->fetch_mesh_with_colour(vertex, colour);
+    // return manager->active_submaps[renderIdx]->fetch_mesh_with_colour(vertex, colour);
 }
 
 // void System::fetch_key_points(float *points, size_t &count, size_t max)
@@ -489,13 +492,13 @@ size_t System::fetch_mesh_with_colour(float *vertex, unsigned char *colour)
 void System::writeMapToDisk(std::string file_name) const
 {
     // mapping->writeMapToDisk(file_name);
-    manager->active_submaps[0]->writeMapToDisk(file_name);
+    // manager->active_submaps[0]->writeMapToDisk(file_name);
 }
 
 void System::readMapFromDisk(std::string file_name)
 {
-    std::cout << "Reading map from " << file_name << std::endl;
-    manager->active_submaps[0]->readMapFromDisk(file_name);
+    // std::cout << "Reading map from " << file_name << std::endl;
+    // manager->active_submaps[0]->readMapFromDisk(file_name);
 }
 
 Eigen::Matrix4f System::get_camera_pose() const

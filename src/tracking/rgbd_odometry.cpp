@@ -323,7 +323,7 @@ void DenseOdometry::reset()
   trackingLost = false;
 }
 
-void DenseOdometry::SetManager(std::shared_ptr<SubMapManager> pManager){
+void DenseOdometry::SetManager(std::shared_ptr<SubmapManager> pManager){
   manager = pManager;
 }
 

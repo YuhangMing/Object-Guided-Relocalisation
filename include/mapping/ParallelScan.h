@@ -1,20 +1,15 @@
-#ifndef FUSION_MAPPING_EXCLUSIVE_SCAN_H
-#define FUSION_MAPPING_EXCLUSIVE_SCAN_H
+#pragma once
+#include <cuda_runtime_api.h>
 
-#include "macros.h"
-
-namespace fusion
+template <int threadBlock>
+__device__ __forceinline__ int ParallelScan(uint element, uint *sum)
 {
 
-template <int thread_block, class T>
-FUSION_DEVICE inline int exclusive_scan(T element, T *const sum)
-{
-
-    __shared__ T buffer[thread_block];
-    __shared__ T block_offset;
+    __shared__ uint buffer[threadBlock];
+    __shared__ uint blockOffset;
 
     if (threadIdx.x == 0)
-        memset(buffer, 0, sizeof(T) * 16 * 16);
+        memset(buffer, 0, sizeof(uint) * 16 * 16);
 
     __syncthreads();
 
@@ -24,7 +19,7 @@ FUSION_DEVICE inline int exclusive_scan(T element, T *const sum)
 
     int s1, s2;
 
-    for (s1 = 1, s2 = 1; s1 < thread_block; s1 <<= 1)
+    for (s1 = 1, s2 = 1; s1 < threadBlock; s1 <<= 1)
     {
         s2 |= s1;
         if ((threadIdx.x & s2) == s2)
@@ -35,14 +30,14 @@ FUSION_DEVICE inline int exclusive_scan(T element, T *const sum)
 
     for (s1 >>= 2, s2 >>= 1; s1 >= 1; s1 >>= 1, s2 >>= 1)
     {
-        if (threadIdx.x != thread_block - 1 && (threadIdx.x & s2) == s2)
+        if (threadIdx.x != threadBlock - 1 && (threadIdx.x & s2) == s2)
             buffer[threadIdx.x + s1] += buffer[threadIdx.x];
 
         __syncthreads();
     }
 
-    if (threadIdx.x == 0 && buffer[thread_block - 1] > 0)
-        block_offset = atomicAdd(sum, buffer[thread_block - 1]);
+    if (threadIdx.x == 0 && buffer[threadBlock - 1] > 0)
+        blockOffset = atomicAdd(sum, buffer[threadBlock - 1]);
 
     __syncthreads();
 
@@ -52,19 +47,15 @@ FUSION_DEVICE inline int exclusive_scan(T element, T *const sum)
         if (buffer[threadIdx.x] == 0)
             offset = -1;
         else
-            offset = block_offset;
+            offset = blockOffset;
     }
     else
     {
         if (buffer[threadIdx.x] == buffer[threadIdx.x - 1])
             offset = -1;
         else
-            offset = block_offset + buffer[threadIdx.x - 1];
+            offset = blockOffset + buffer[threadIdx.x - 1];
     }
 
     return offset;
 }
-
-} // namespace fusion
-
-#endif

@@ -6,19 +6,26 @@
 #include <sophus/se3.hpp>
 #include <mutex>
 #include "system.h"
-#include "data_struct/map_struct.h"
 #include "data_struct/rgbd_frame.h"
+#include "mapping/VoxelMap.h"
+#include "mapping/RayTraceEngine.h"
+#include "mapping/MeshEngine.h"
 
 namespace fusion
 {
 
-class DenseMapping;
+// class DenseMapping;
 class DenseOdometry;
 
-class SubMapManager {
+class SubmapManager {
 
 public:
-	SubMapManager();
+	SubmapManager();
+	~SubmapManager();
+
+	MeshEngine *pMesher;
+	RayTraceEngine *pRayTracer;
+	std::vector< MapStruct * > vActiveSubmaps;
 
 	void Create(int submapIdx, bool bTrack=false, bool bRender=false);
 	void Create(int submapIdx, RgbdImagePtr ref_img, bool bTrack=false, bool bRender=true);
@@ -54,9 +61,9 @@ public:
 
 	// submap storage
 	// std::vector< std::shared_ptr<DenseMapping> > all_submaps;	// discard this variable, all_submaps = active + passive
-	std::vector< std::shared_ptr<DenseMapping> > active_submaps;
-	std::vector< std::shared_ptr<DenseMapping> > passive_submaps;
-	std::vector< int > activeTOpassiveIdx;
+	// std::vector< std::shared_ptr<DenseMapping> > active_submaps;
+	// std::vector< std::shared_ptr<DenseMapping> > passive_submaps;
+	// std::vector< int > activeTOpassiveIdx;
 
 	// std::map< int, std::vector<Eigen::Vector4f> > mPassiveMPs;
 	// std::map< int, std::vector<Eigen::Vector4f> > mPassiveNs;

@@ -5,16 +5,15 @@
 #include <eigen3/Eigen/Core>
 #include <opencv2/opencv.hpp>
 #include "data_struct/rgbd_frame.h"
-#include "voxel_hashing/voxel_hashing.h"
-#include "tracking/rgbd_odometry.h"
-#include "relocalization/relocalizer.h"
-#include "map_manager.h"
 #include "detection/detector.h"
+#include "tracking/rgbd_odometry.h"
+#include "mapping/SubmapManager.h"
+#include "relocalization/relocalizer.h"
 
 namespace fusion
 {
 
-class SubMapManager;
+class SubmapManager;
 class DenseOdometry;
 // class MaskRCNN;
 
@@ -125,7 +124,8 @@ private:
     bool hasNewKeyFrame;
 
     // System modules
-    std::shared_ptr<SubMapManager> manager;
+    // std::shared_ptr<SubMapManager> manager;
+    std::shared_ptr<SubmapManager> manager;
     std::shared_ptr<DenseOdometry> odometry;
 
     void initialization();

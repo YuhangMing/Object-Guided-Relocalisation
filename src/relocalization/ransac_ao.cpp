@@ -1,7 +1,5 @@
-#include <stdlib.h>
-#include <Eigen/Dense>
-#include <Eigen/Eigenvalues>
 #include "relocalization/ransac_ao.h"
+
 #define MAX_RANSAC_ITER 200
 
 namespace fusion

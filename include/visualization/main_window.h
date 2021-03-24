@@ -2,6 +2,8 @@
 #define GL_WINDOW_H
 
 #include "system.h"
+#include "utils/settings.h"
+// #include "visualization/drawer.h"
 #include <pangolin/pangolin.h>
 #include <pangolin/gl/glcuda.h>
 #include <cuda_runtime_api.h>
@@ -163,10 +165,10 @@ private:
     //! system ref
     fusion::System *slam;
 
-    //! key point array
-    float *keypoints;
-    size_t sizeKeyPoint;
-    size_t maxSizeKeyPoint;
+    // //! key point array
+    // float *keypoints;
+    // size_t sizeKeyPoint;
+    // size_t maxSizeKeyPoint;
 
     //! color palette
     /*

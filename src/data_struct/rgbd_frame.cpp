@@ -30,11 +30,6 @@ void RgbdFrame::copyTo(RgbdFramePtr dst){
 	if(dst==NULL)
 		return;
 
-	dst->cv_key_points = cv_key_points;
-	dst->key_points = key_points;
-	dst->neighbours = neighbours;
-	descriptors.copyTo(dst->descriptors);
-
 	dst->id = id;
 	dst->timeStamp = timeStamp;
 	dst->pose = pose;
