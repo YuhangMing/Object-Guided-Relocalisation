@@ -30,6 +30,8 @@ public:
 	void Create(int submapIdx, bool bTrack=false, bool bRender=false);
 	void Create(int submapIdx, RgbdImagePtr ref_img, bool bTrack=false, bool bRender=true);
 
+	std::vector<MapStruct *> getDenseMaps();
+
 	void ResetSubmaps();
 
 	/*

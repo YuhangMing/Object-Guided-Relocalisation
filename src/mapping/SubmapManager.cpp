@@ -40,7 +40,8 @@ void SubmapManager::Create(int submapIdx, bool bTrack, bool bRender)
 	pDenseMap->reset();
 	pDenseMap->SetPose(Sophus::SE3d());
 
-	vActiveSubmaps.push_back((pDenseMap));
+	vActiveSubmaps.push_back(pDenseMap);
+	std::cout << "Has mesh after creating the map? " << pDenseMap->mbHasMesh << std::endl;
 
 	// auto submap = std::make_shared<DenseMapping>(GlobalCfg.K, GlobalCfg.width, GlobalCfg.height,
 	// 											 submapIdx, bTrack, bRender);
@@ -52,6 +53,10 @@ void SubmapManager::Create(int submapIdx, bool bTrack, bool bRender)
 	ref_frame_id = 0;
 }
 
+std::vector<MapStruct *> SubmapManager::getDenseMaps()
+{
+	return vActiveSubmaps;
+}
 
 void SubmapManager::ResetSubmaps(){
 	// for(size_t i=0; i < active_submaps.size(); i++){

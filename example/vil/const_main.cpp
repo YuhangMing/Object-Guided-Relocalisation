@@ -59,15 +59,15 @@ int main(int argc, char **argv)
             }
 
             // if (window.IsPaused() && window.mbFlagUpdateMesh)
-            if (window.mbFlagUpdateMesh)
-            {
-                auto *vertex = window.GetMappedVertexBuffer();
-                auto *colour = window.GetMappedColourBuffer();
-                window.VERTEX_COUNT = slam.fetch_mesh_with_colour(vertex, colour);
+            // if (window.mbFlagUpdateMesh)
+            // {
+            //     auto *vertex = window.GetMappedVertexBuffer();
+            //     auto *colour = window.GetMappedColourBuffer();
+            //     window.VERTEX_COUNT = slam.fetch_mesh_with_colour(vertex, colour);
 
-                window.mbFlagUpdateMesh = false;
-            }
-
+            //     window.mbFlagUpdateMesh = false;
+            // }
+            
             window.Render();
         }
     }

@@ -194,7 +194,7 @@ void System::process_images(const cv::Mat depth, const cv::Mat image,
         /* TRACKING */
         if (!odometry->trackingLost){
             b_reloc_attp = false;
-            // std::cout << "Tracking - " << i <<  std::endl;
+            std::cout << "- Dense Tracking." <<  std::endl;
             // update pose of current_frame and reference_frame in corresponding DeviceImage
             odometry->trackFrame(current_frame);
             
@@ -248,36 +248,33 @@ void System::process_images(const cv::Mat depth, const cv::Mat image,
             auto current_image = odometry->get_current_image();
             auto current_frame = current_image->get_reference_frame();
             
-            cv::cuda::GpuMat cuImage, cuDepth, cuVMap; // cuNMap;
-            current_image->get_image().copyTo(cuImage);
+            cv::cuda::GpuMat cuDepth, cuVMap; // cuImage, cuNMap;
+            // current_image->get_image().copyTo(cuImage);
             current_image->get_raw_depth().copyTo(cuDepth);
             current_image->get_vmap().copyTo(cuVMap);
             // current_image->get_nmap(0).copyTo(cuNMap);
             Sophus::SE3d Tcm = current_frame->pose; // transformation from camera to map
-            std::cout << "Pose used for fusing and raytracing:\n"
-                      << Tcm.matrix() << std::endl;
+            std::cout << Tcm.matrix() << std::endl;
             
             // update the map
-            std::cout << "Map fusing" << std::endl;
-            // manager->active_submaps[i]->update(cuDepth, cuImage, Tcm);
+            std::cout << "- Map Fusing." << std::endl;
             manager->vActiveSubmaps[i]->Fuse(cuDepth, Tcm);
 
-            std::cout << "Raytracing " << std::endl;
-            cv::Mat test_vmap, test_nmap;
-            cuVMap.download(test_vmap);
-            // cuNMap.download(test_nmap);
-            // manager->active_submaps[i]->raycast(cuVMap, cuImage, Tcm);
+            std::cout << "- Raytracing." << std::endl;
+            // cv::Mat test_vmap, test_nmap;
+            // cuVMap.download(test_vmap);
+            // // cuNMap.download(test_nmap);
             manager->vActiveSubmaps[i]->RayTrace(Tcm);
             cuVMap = manager->vActiveSubmaps[i]->GetRayTracingResult();
             
             auto reference_image = odometry->get_reference_image(i);
             reference_image->resize_device_map(cuVMap); 
-            cv::Mat test_raycasted_vmap;
-            cuVMap.download(test_raycasted_vmap);
-            // cv::imshow("nmap before raycast", test_nmap);
-            cv::imshow("vmap before raycast", test_vmap);
-            cv::imshow("vmap after raycast", test_raycasted_vmap);
-            cv::waitKey(0);
+            // cv::Mat test_raycasted_vmap;
+            // cuVMap.download(test_raycasted_vmap);
+            // // cv::imshow("nmap before raycast", test_nmap);
+            // cv::imshow("vmap before raycast", test_vmap);
+            // cv::imshow("vmap after raycast", test_raycasted_vmap);
+            // cv::waitKey(0);
 
             // auto reference_image = odometry->get_reference_image(i);
             // auto reference_frame = reference_image->get_reference_frame();
@@ -440,9 +437,8 @@ void System::process_images(const cv::Mat depth, const cv::Mat image,
     //     pose_file.close();
     // }
 
-    std::cout << "FINISHED current frame.\n" << std::endl;
-
     frame_id += 1;
+    std::cout << "FINISHED current frame.\n" << std::endl;
 }
 
 void System::restart()
@@ -459,6 +455,25 @@ void System::restart()
 void System::setLost(bool lost)
 {
     odometry->trackingLost = true;
+}
+
+Eigen::Matrix4f System::get_camera_pose() const
+{
+    // Eigen::Matrix4f Tmf, Twm; 
+    Eigen::Matrix4f T;
+    if (odometry->get_reference_image(renderIdx))
+    {
+        // final display map is primary submap centered.
+        T = odometry->get_reference_image(renderIdx)->get_reference_frame()->pose.cast<float>().matrix();
+        // Twm = manager->active_submaps[renderIdx]->poseGlobal.cast<float>().matrix();
+        // T = Twm * Tmf;
+    }
+    return T;
+}
+
+std::vector<MapStruct *> System::get_dense_maps()
+{
+    return manager->getDenseMaps();
 }
 
 void System::save_mesh_to_file(const char *str)
@@ -499,20 +514,6 @@ void System::readMapFromDisk(std::string file_name)
 {
     // std::cout << "Reading map from " << file_name << std::endl;
     // manager->active_submaps[0]->readMapFromDisk(file_name);
-}
-
-Eigen::Matrix4f System::get_camera_pose() const
-{
-    // Eigen::Matrix4f Tmf, Twm; 
-    Eigen::Matrix4f T;
-    if (odometry->get_reference_image(renderIdx))
-    {
-        // final display map is primary submap centered.
-        T = odometry->get_reference_image(renderIdx)->get_reference_frame()->pose.cast<float>().matrix();
-        // Twm = manager->active_submaps[renderIdx]->poseGlobal.cast<float>().matrix();
-        // T = Twm * Tmf;
-    }
-    return T;
 }
 
 /* Semantic & Reloc diasbled for now

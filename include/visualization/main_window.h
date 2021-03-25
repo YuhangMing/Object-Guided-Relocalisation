@@ -101,7 +101,6 @@ private:
     std::shared_ptr<pangolin::Var<bool>> BoxDisplayScene;
     std::shared_ptr<pangolin::Var<int>> BarSwitchMap;
     std::shared_ptr<pangolin::Var<bool>> BoxDisplayCamera;
-    
     /* Semantic & Reloc diasbled for now
     std::shared_ptr<pangolin::Var<bool>> BoxDisplayDetected;
     std::shared_ptr<pangolin::Var<bool>> BoxDisplayKeyCameras;
@@ -120,17 +119,13 @@ private:
     std::shared_ptr<pangolin::Var<bool>> BoxDisplayAllCuboids;
     */
 
+    //! New Draw Mesh Function
+    void DrawMesh();
+    void DeleteMesh();
+
     //! Acquire Mehs Functions
     void UpdateMeshWithNormal();
     void UpdateMeshWithColour();
-
-    //! Draw Cuboid Function
-    bool bUseGT = false;
-    void DrawCuboids(std::vector<std::pair<int, std::vector<float>>> label_dim_pairs, 
-                     int idx, bool bRel, int usePose=0);
-    void DrawPtClouds(int num_objs, int idx, bool bRel);
-    // TEST //
-    void DrawTestCuboids(int label);
 
     //! Draw Mesh Functions
     void DrawMeshShaded();
@@ -142,6 +137,14 @@ private:
     pangolin::GlBufferCudaPtr BufferVertex;
     pangolin::GlBufferCudaPtr BufferNormal;
     pangolin::GlBufferCudaPtr BufferColour;
+
+    //! Draw Cuboid Function
+    bool bUseGT = false;
+    void DrawCuboids(std::vector<std::pair<int, std::vector<float>>> label_dim_pairs, 
+                     int idx, bool bRel, int usePose=0);
+    void DrawPtClouds(int num_objs, int idx, bool bRel);
+    // TEST //
+    void DrawTestCuboids(int label);
 
     //! Registered CUDA Ptrs
     std::shared_ptr<pangolin::CudaScopedMappedPtr> MappedVertex;

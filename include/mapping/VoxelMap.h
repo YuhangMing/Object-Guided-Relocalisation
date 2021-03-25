@@ -74,7 +74,7 @@ public:
 
     float *mplPoint;
     float *mplNormal;
-    int N;
+    int N;  // N = nTriangles*9
     bool mbHasMesh;
 
     // OpenGL buffer for Drawing

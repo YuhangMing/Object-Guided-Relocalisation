@@ -4,12 +4,14 @@ layout(location = 0) in vec3 position;
 layout(location = 1) in vec3 a_normal;
 
 uniform mat4 mvp_matrix;
+uniform mat4 Tmw;
+uniform float colourTaint;
 
 out vec3 shaded_colour;
 
 void main() 
 {
-	gl_Position =  mvp_matrix * vec4(position, 1.0);
+	gl_Position =  mvp_matrix * Tmw * vec4(position, 1.0);
 	vec3 lightpos = vec3(5, 5, 5);
 	const float ka = 0.3;
 	const float kd = 0.5;

@@ -9,6 +9,11 @@
 #include <opencv2/cudaarithm.hpp>
 #include "data_struct/rgbd_frame.h"
 
+/*
+Data structure to store all cv::cuda::GpuMat 
+in tracking process.
+*/
+
 namespace fusion
 {
 

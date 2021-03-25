@@ -8,6 +8,7 @@
 #include "detection/detector.h"
 #include "tracking/rgbd_odometry.h"
 #include "mapping/SubmapManager.h"
+#include "mapping/VoxelMap.h"
 #include "relocalization/relocalizer.h"
 
 namespace fusion
@@ -41,6 +42,16 @@ public:
     cv::Mat get_segmented_mask() const;
     */
 
+    // system controls
+    void change_colour_mode(int colour_mode = 0);
+    void change_run_mode(int run_mode = 0);
+    void restart();
+    void setLost(bool lost);
+
+    // visualization
+    Eigen::Matrix4f get_camera_pose() const;
+    std::vector<MapStruct *> get_dense_maps();
+    
     // create a mesh from the map
     // and save it to a named file
     // it only contains vertex data
@@ -60,18 +71,9 @@ public:
     bool is_initialized;
     mutable bool b_reloc_attp;
 
-    // system controls
-    void change_colour_mode(int colour_mode = 0);
-    void change_run_mode(int run_mode = 0);
-    void restart();
-    void setLost(bool lost);
-
     void writeMapToDisk(std::string file_name) const;
     void readMapFromDisk(std::string file_name);
     // void recordSequence(std::string dir) const;
-
-    // visualization
-    Eigen::Matrix4f get_camera_pose() const;
     
     /* Semantic & Reloc diasbled for now
     std::vector<Eigen::Matrix<float, 4, 4>> getKeyFramePoses() const;

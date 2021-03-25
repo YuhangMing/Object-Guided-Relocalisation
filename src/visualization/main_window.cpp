@@ -2,6 +2,11 @@
 
 #define ENTER_KEY 13
 
+
+
+
+
+
 MainWindow::~MainWindow()
 {
     // delete keypoints;
@@ -10,9 +15,9 @@ MainWindow::~MainWindow()
 }
 
 MainWindow::MainWindow(const char *name, size_t width, size_t height, bool bDisplay)
-    : mbFlagRestart(false), WindowName(name), mbFlagUpdateMesh(false),
-      VERTEX_COUNT(0), MAX_VERTEX_COUNT(20000000)
-    //   , sizeKeyPoint(0),maxSizeKeyPoint(8000000)
+    : mbFlagRestart(false), WindowName(name)
+    // , mbFlagUpdateMesh(false), VERTEX_COUNT(0), MAX_VERTEX_COUNT(20000000)
+    // , sizeKeyPoint(0),maxSizeKeyPoint(8000000)
 {
     ResetAllFlags();
 
@@ -23,11 +28,11 @@ MainWindow::MainWindow(const char *name, size_t width, size_t height, bool bDisp
     SetupDisplays();
     RegisterKeyCallback();
     InitTextures();
-    InitMeshBuffers();
+    // InitMeshBuffers();
     InitGlSlPrograms();
 
-    cIndicator = 1;
-    nIndicator = 0;
+    // cIndicator = 1;
+    // nIndicator = 0;
 
     // bDisplayOtherPoses = bDisplay;
     // bRecording = false;
@@ -37,7 +42,7 @@ void MainWindow::SetupGLFlags()
 {
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_BLEND);
-    // glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }
 
 void MainWindow::SetupDisplays()
@@ -63,7 +68,7 @@ void MainWindow::SetupDisplays()
     // BoxDisplayDetected = std::make_shared<pangolin::Var<bool>>("Menu.Detected Result", true, true);
     
     // display name, current val, min, max;
-    BarSwitchMap = std::make_shared<pangolin::Var<int>>("Menu.Display Map", 1, 0, 2);
+    // BarSwitchMap = std::make_shared<pangolin::Var<int>>("Menu.Display Map", 1, 0, 2);
     BoxDisplayCamera = std::make_shared<pangolin::Var<bool>>("Menu.Current Camera", true, true);
     
     /* Semantic disabled for now
@@ -188,73 +193,113 @@ void MainWindow::InitTextures()
     */
 }
 
-// NEED THIS ONE?????? -------------------------------------------------------
 void MainWindow::InitMeshBuffers()
 {
-    auto size = sizeof(float) * 3 * MAX_VERTEX_COUNT;
+    // auto size = sizeof(float) * 3 * MAX_VERTEX_COUNT;
 
-    BufferVertex.Reinitialise(
-        pangolin::GlArrayBuffer,
-        size,
-        cudaGLMapFlagsWriteDiscard,
-        GL_STATIC_DRAW);
+    // BufferVertex.Reinitialise(
+    //     pangolin::GlArrayBuffer,
+    //     size,
+    //     cudaGLMapFlagsWriteDiscard,
+    //     GL_STATIC_DRAW);
 
-    BufferNormal.Reinitialise(
-        pangolin::GlArrayBuffer,
-        size,
-        cudaGLMapFlagsWriteDiscard,
-        GL_STATIC_DRAW);
+    // BufferNormal.Reinitialise(
+    //     pangolin::GlArrayBuffer,
+    //     size,
+    //     cudaGLMapFlagsWriteDiscard,
+    //     GL_STATIC_DRAW);
 
-    BufferColour.Reinitialise(
-        pangolin::GlArrayBuffer,
-        size,
-        cudaGLMapFlagsWriteDiscard,
-        GL_STATIC_DRAW);
+    // BufferColour.Reinitialise(
+    //     pangolin::GlArrayBuffer,
+    //     size,
+    //     cudaGLMapFlagsWriteDiscard,
+    //     GL_STATIC_DRAW);
 
-    MappedVertex = std::make_shared<pangolin::CudaScopedMappedPtr>(BufferVertex);
-    MappedNormal = std::make_shared<pangolin::CudaScopedMappedPtr>(BufferNormal);
-    MappedColour = std::make_shared<pangolin::CudaScopedMappedPtr>(BufferColour);
+    // MappedVertex = std::make_shared<pangolin::CudaScopedMappedPtr>(BufferVertex);
+    // MappedNormal = std::make_shared<pangolin::CudaScopedMappedPtr>(BufferNormal);
+    // MappedColour = std::make_shared<pangolin::CudaScopedMappedPtr>(BufferColour);
 
-    glGenVertexArrays(1, &VAOShade);
-    glBindVertexArray(VAOShade);
+    // glGenVertexArrays(1, &VAOShade);
+    // glBindVertexArray(VAOShade);
 
-    BufferVertex.Bind();
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-    glEnableVertexAttribArray(0);
+    // BufferVertex.Bind();
+    // glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+    // glEnableVertexAttribArray(0);
 
-    BufferNormal.Bind();
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
-    glEnableVertexAttribArray(1);
+    // BufferNormal.Bind();
+    // glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
+    // glEnableVertexAttribArray(1);
 
-    glGenVertexArrays(1, &VAOColour);
-    glBindVertexArray(VAOColour);
+    // glGenVertexArrays(1, &VAOColour);
+    // glBindVertexArray(VAOColour);
 
-    BufferVertex.Bind();
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-    glEnableVertexAttribArray(0);
+    // BufferVertex.Bind();
+    // glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+    // glEnableVertexAttribArray(0);
 
-    BufferColour.Bind();
-    glVertexAttribPointer(2, 3, GL_UNSIGNED_BYTE, GL_TRUE, 0, 0);
-    glEnableVertexAttribArray(2);
+    // BufferColour.Bind();
+    // glVertexAttribPointer(2, 3, GL_UNSIGNED_BYTE, GL_TRUE, 0, 0);
+    // glEnableVertexAttribArray(2);
 
-    // previous buffers are unbinded automatically when binding next buffer.
-    // so only last one need to call Unbind explicitly
-    BufferColour.Unbind();
-    glBindVertexArray(0);
+    // // previous buffers are unbinded automatically when binding next buffer.
+    // // so only last one need to call Unbind explicitly
+    // BufferColour.Unbind();
+    // glBindVertexArray(0);
 }
 
 void MainWindow::InitGlSlPrograms()
 {
-    ShadingProg.AddShaderFromFile(
-        pangolin::GlSlShaderType::GlSlVertexShader,
-        "./glsl_shader/phong.vert");
+    const char vertexShader[] =
+        "#version 330\n"
+        "\n"
+        "layout(location = 0) in vec3 position;\n"
+        "layout(location = 1) in vec3 a_normal;\n"
+        "uniform mat4 mvpMat;\n"
+        "uniform mat4 Tmw;\n"
+        "uniform float colourTaint;\n"
+        "out vec3 shaded_colour;\n"
+        "\n"
+        "void main(void) {\n"
+        "    gl_Position = mvpMat * Tmw * vec4(position, 1.0);\n"
+        "    vec3 lightpos = vec3(5, 5, 5);\n"
+        "    const float ka = 0.3;\n"
+        "    const float kd = 0.5;\n"
+        "    const float ks = 0.2;\n"
+        "    const float n = 20.0;\n"
+        "    float ax = 1.0;\n"
+        "    float dx = 1.0;\n"
+        "    float sx = 1.0;\n"
+        "    const float lx = 1.0;\n"
+        "    vec3 L = normalize(lightpos - position);\n"
+        "    vec3 V = normalize(vec3(0.0) - position);\n"
+        "    vec3 R = normalize(2 * a_normal * dot(a_normal, L) - L);\n"
+        "    float i1 = ax * ka * dx;\n"
+        "    float i2 = lx * kd * dx * max(0.0, dot(a_normal, L));\n"
+        "    float i3 = lx * ks * sx * pow(max(0.0, dot(R, V)), n);\n"
+        "    float Ix = max(0.0, min(255.0, i1 + i2 + i3));\n"
+        "    shaded_colour = vec3(Ix, Ix, Ix);\n"
+        "}\n";
 
-    ShadingProg.AddShaderFromFile(
-        pangolin::GlSlShaderType::GlSlFragmentShader,
-        "./glsl_shader/direct_output.frag");
+    const char fragShader[] =
+        "#version 330\n"
+        "\n"
+        "in vec3 shaded_colour;\n"
+        "out vec4 colour_out;\n"
+        "void main(void) {\n"
+        "    colour_out = vec4(shaded_colour, 1);\n"
+        "}\n";
+    ShadingProg.AddShader(pangolin::GlSlVertexShader, vertexShader);
+    ShadingProg.AddShader(pangolin::GlSlFragmentShader, fragShader);
+    // ShadingProg.AddShaderFromFile(
+    //     pangolin::GlSlShaderType::GlSlVertexShader,
+    //     "./glsl_shader/phong.vert");
+    // ShadingProg.AddShaderFromFile(
+    //     pangolin::GlSlShaderType::GlSlFragmentShader,
+    //     "./glsl_shader/direct_output.frag");
 
     ShadingProg.Link();
 
+    // color not used here.
     ShadingColorProg.AddShaderFromFile(
         pangolin::GlSlShaderType::GlSlVertexShader,
         "./glsl_shader/colour.vert");
@@ -399,31 +444,34 @@ void MainWindow::Render()
     // -- Display 3D map as constructing ----
     // -- Could jeopardize the real-time performance
     mpViewMesh->Activate(*CameraView);
-    // std::cout << "-- Start rendering... ";
-    switch (*BarSwitchMap)
-    {
-        case 2:
-            // if(cIndicator == 0)
-            // {
-            //     UpdateMeshWithColour();
-            //     cIndicator++;
-            //     nIndicator = 0;
-            // }
-            // DrawMeshColoured();
-            break;
-        case 1:
-            if(nIndicator == 0)
-            {
-                UpdateMeshWithNormal();
-                nIndicator++;
-                cIndicator = 0;
-            }
-            DrawMeshShaded();
-        default:
-            cIndicator = 0;
-            nIndicator = 0;
-            break;
-    }
+    if (!IsPaused())
+        DeleteMesh();
+    DrawMesh();
+    // switch (*BarSwitchMap)
+    // {
+    //     case 2:
+    //         // if(cIndicator == 0)
+    //         // {
+    //         //     UpdateMeshWithColour();
+    //         //     cIndicator++;
+    //         //     nIndicator = 0;
+    //         // }
+    //         // DrawMeshColoured();
+    //         break;
+    //     case 1:
+    //         DrawMesh();
+    //         // if(nIndicator == 0)
+    //         // {
+    //         //     UpdateMeshWithNormal();
+    //         //     nIndicator++;
+    //         //     cIndicator = 0;
+    //         // }
+    //         // DrawMeshShaded();
+    //     default:
+    //         // cIndicator = 0;
+    //         // nIndicator = 0;
+    //         break;
+    // }
     // std::cout << "    DONE." << std::endl;
     Eigen::Matrix3f K;
     K << 580, 0, 320, 0, 580, 240, 0, 0, 1;
@@ -972,57 +1020,139 @@ void MainWindow::Render()
         usleep(10000-span);
 }
 
+void MainWindow::DrawMesh()
+{
+    auto vpMaps = slam->get_dense_maps();
+
+    // ToDo: some future process to select the map to be visualised
+
+    for (auto pMap : vpMaps)
+    {
+        if(!pMap->mbHasMesh)
+            pMap->GenerateMesh();
+
+        if (!pMap->mplPoint)
+            continue;
+        
+        if(!pMap->mbVertexBufferCreated)
+        {
+            glGenBuffers(1, &pMap->mGlVertexBuffer);
+            glBindBuffer(GL_ARRAY_BUFFER, pMap->mGlVertexBuffer);
+            // glBufferData(GL_ARRAY_BUFFER, sizeof(float) * pMap->N, pMap->mplPoint, GL_STATIC_DRAW);
+            glBufferData(GL_ARRAY_BUFFER, sizeof(float) * pMap->N, pMap->mplPoint, GL_DYNAMIC_DRAW);
+            
+            glGenBuffers(1, &pMap->mGlNormalBuffer);
+            glBindBuffer(GL_ARRAY_BUFFER, pMap->mGlNormalBuffer);
+            // glBufferData(GL_ARRAY_BUFFER, sizeof(float) * pMap->N, pMap->mplNormal, GL_STATIC_DRAW);
+            glBufferData(GL_ARRAY_BUFFER, sizeof(float) * pMap->N, pMap->mplNormal, GL_DYNAMIC_DRAW);
+            
+            glBindBuffer(GL_ARRAY_BUFFER, 0);
+            pMap->mbVertexBufferCreated = true;
+        }
+
+        Eigen::Matrix4f Tmw = pMap->GetPose().matrix().cast<float>();
+
+        ShadingProg.Bind();
+        ShadingProg.SetUniform("Tmw", pangolin::OpenGlMatrix(Tmw));
+        ShadingProg.SetUniform("mvpMat", CameraView->GetProjectionModelViewMatrix());
+        ShadingProg.SetUniform("colourTaint", pMap->mColourTaint);
+
+        glBindBuffer(GL_ARRAY_BUFFER, pMap->mGlVertexBuffer);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void *)0);
+        glEnableVertexAttribArray(0);
+
+        glBindBuffer(GL_ARRAY_BUFFER, pMap->mGlNormalBuffer);
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, (void *)0);
+        glEnableVertexAttribArray(1);
+
+        glDrawArrays(GL_TRIANGLES, 0, pMap->N);
+
+        glDisableVertexAttribArray(0);
+        glDisableVertexAttribArray(1);
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        ShadingProg.Unbind();
+    }
+}
+void MainWindow::DeleteMesh()
+{
+    auto vpMaps = slam->get_dense_maps();
+    for (auto pMap : vpMaps)
+    {
+        if(pMap->mbHasMesh)
+            pMap->DeleteMesh();
+
+        
+        if(pMap->mbVertexBufferCreated)
+        {
+            glDeleteBuffers(1, &pMap->mGlVertexBuffer);
+            glDeleteBuffers(1, &pMap->mGlNormalBuffer);
+            pMap->mbVertexBufferCreated = false;
+        }
+    }
+}
+
 void MainWindow::UpdateMeshWithNormal()
 {
-    // Main
-    auto *vertex = GetMappedVertexBuffer();
-    auto *normal = GetMappedNormalBuffer();
-    VERTEX_COUNT = slam->fetch_mesh_with_normal(vertex, normal);
+    // // Main
+    // auto *vertex = GetMappedVertexBuffer();
+    // auto *normal = GetMappedNormalBuffer();
+    // VERTEX_COUNT = slam->fetch_mesh_with_normal(vertex, normal);
 }
-void MainWindow::DrawMeshShaded()
-{
-    if (VERTEX_COUNT == 0)
-        return;
-
-    ShadingProg.Bind();
-    glBindVertexArray(VAOShade);
-
-    ShadingProg.SetUniform("mvp_matrix", CameraView->GetProjectionModelViewMatrix());
-
-    glDrawArrays(GL_TRIANGLES, 0, VERTEX_COUNT * 3);
-
-    glBindVertexArray(0);
-    ShadingProg.Unbind();
-}
-
 void MainWindow::UpdateMeshWithColour()
 {
-    auto *vertex = GetMappedVertexBuffer();
-    auto *colour = GetMappedColourBuffer();
-    VERTEX_COUNT = slam->fetch_mesh_with_colour(vertex, colour);
+    // auto *vertex = GetMappedVertexBuffer();
+    // auto *colour = GetMappedColourBuffer();
+    // VERTEX_COUNT = slam->fetch_mesh_with_colour(vertex, colour);
+}
+
+void MainWindow::DrawMeshShaded()
+{
+    // if (VERTEX_COUNT == 0)
+    //     return;
+
+    // ShadingProg.Bind();
+    // glBindVertexArray(VAOShade);
+
+    // ShadingProg.SetUniform("mvp_matrix", CameraView->GetProjectionModelViewMatrix());
+
+    // glDrawArrays(GL_TRIANGLES, 0, VERTEX_COUNT * 3);
+
+    // glBindVertexArray(0);
+    // ShadingProg.Unbind();
 }
 void MainWindow::DrawMeshColoured()
 {
-    if (VERTEX_COUNT == 0)
-        return;
+    // if (VERTEX_COUNT == 0)
+    //     return;
 
-    ShadingColorProg.Bind();
-    glBindVertexArray(VAOColour);
+    // ShadingColorProg.Bind();
+    // glBindVertexArray(VAOColour);
 
-    ShadingColorProg.SetUniform("mvp_matrix", CameraView->GetProjectionModelViewMatrix());
+    // ShadingColorProg.SetUniform("mvp_matrix", CameraView->GetProjectionModelViewMatrix());
 
-    glDrawArrays(GL_TRIANGLES, 0, VERTEX_COUNT * 3);
+    // glDrawArrays(GL_TRIANGLES, 0, VERTEX_COUNT * 3);
 
-    glBindVertexArray(0);
-    ShadingColorProg.Unbind();
+    // glBindVertexArray(0);
+    // ShadingColorProg.Unbind();
 }
-
-
-/* Semantic & Reloc disabled for now.
 void MainWindow::DrawMeshNormalMapped()
 {
 }
 
+float *MainWindow::GetMappedVertexBuffer()
+{
+    // return (float *)**MappedVertex;
+}
+float *MainWindow::GetMappedNormalBuffer()
+{
+    // return (float *)**MappedNormal;
+}
+unsigned char *MainWindow::GetMappedColourBuffer()
+{
+    // return (unsigned char *)**MappedColour;
+}
+
+/* Semantic & Reloc disabled for now.
 void MainWindow::DrawCuboids(std::vector<std::pair<int, std::vector<float>>> label_dim_pairs,
                              int i, bool bRel, int usePose)
 {
@@ -1145,20 +1275,5 @@ void MainWindow::SetCurrentCamera(Eigen::Matrix4f T)
 void MainWindow::SetSystem(fusion::System *sys)
 {
     slam = sys;
-}
-
-float *MainWindow::GetMappedVertexBuffer()
-{
-    return (float *)**MappedVertex;
-}
-
-float *MainWindow::GetMappedNormalBuffer()
-{
-    return (float *)**MappedNormal;
-}
-
-unsigned char *MainWindow::GetMappedColourBuffer()
-{
-    return (unsigned char *)**MappedColour;
 }
 

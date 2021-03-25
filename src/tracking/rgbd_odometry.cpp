@@ -10,10 +10,6 @@ DenseOdometry::DenseOdometry()
       trackingLost(false),
       initialized(false)
 {
-  // BuildIntrinsicPyramid(base, cam_params, NUM_PYR);
-  // this->base = base;
-  // this->NUM_PYR = NUM_PYR;
-
   // Create K pyramid
   std::cout << "Inside DO: \n" << GlobalCfg.K << std::endl << std::endl;
   vK.clear();
@@ -169,8 +165,6 @@ void DenseOdometry::trackFrame(std::shared_ptr<RgbdFrame> frame)
     vModelFrames[submapIdx] = frame;
     copyDeviceImage(currDeviceMapPyramid, vModelDeviceMapPyramid[submapIdx]);
     trackingLost = false;
-
-    std::cout << frame->pose.matrix() << std::endl;
   }
   else
   {
