@@ -41,14 +41,8 @@ void SubmapManager::Create(int submapIdx, bool bTrack, bool bRender)
 	pDenseMap->SetPose(Sophus::SE3d());
 
 	vActiveSubmaps.push_back(pDenseMap);
-	std::cout << "Has mesh after creating the map? " << pDenseMap->mbHasMesh << std::endl;
 
-	// auto submap = std::make_shared<DenseMapping>(GlobalCfg.K, GlobalCfg.width, GlobalCfg.height,
-	// 											 submapIdx, bTrack, bRender);
-	// submap->poseGlobal = Sophus::SE3d();	// set to identity
-	// active_submaps.push_back(submap);
-
-	bHasNewSM = false;
+	// bHasNewSM = false;
 	renderIdx = submapIdx;
 	ref_frame_id = 0;
 }
@@ -56,6 +50,42 @@ void SubmapManager::Create(int submapIdx, bool bTrack, bool bRender)
 std::vector<MapStruct *> SubmapManager::getDenseMaps()
 {
 	return vActiveSubmaps;
+}
+
+void SubmapManager::writeMapToDisk()
+{
+	for(int i=0; i<vActiveSubmaps.size(); ++i)
+	{
+		std::string file_name = GlobalCfg.map_file + "_" + std::to_string(i) + ".data";
+		auto pDenseMap = vActiveSubmaps[i];
+		pDenseMap->writeToDisk(file_name);
+	}
+}
+
+void SubmapManager::readMapFromDisk()
+{	
+	for(int i=0; i<vActiveSubmaps.size(); ++i)
+	{
+		std::string file_name = GlobalCfg.map_file + "_" + std::to_string(i) + ".data";	
+		std::cout << "Reading from file: " << file_name << std::endl;
+		auto pDenseMap = vActiveSubmaps[i];
+		pDenseMap->readFromDisk(file_name);
+	}
+	int num_active_maps = vActiveSubmaps.size();
+	for(int i=num_active_maps; i<GlobalCfg.mapSize; ++i)
+	{
+		std::string file_name = GlobalCfg.map_file + "_" + std::to_string(i) + ".data";
+		auto pDenseMap = new MapStruct(GlobalCfg.K);
+		pDenseMap->SetMeshEngine(pMesher);
+		pDenseMap->SetTracer(pRayTracer);
+		pDenseMap->readFromDisk(file_name);
+		pDenseMap->SetPose(Sophus::SE3d());
+
+		vActiveSubmaps.push_back(pDenseMap);
+
+		renderIdx = i; // ?? set to i or 0 here???
+		ref_frame_id = 0;
+	}
 }
 
 void SubmapManager::ResetSubmaps(){

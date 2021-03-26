@@ -68,6 +68,9 @@ public:
     void SetActiveFlag(bool flag);
     bool isActive();
 
+    void writeToDisk(std::string file_name, bool binary = true);
+    void readFromDisk(std::string file_name, bool binary = true);
+
 public:
     void GenerateMesh();
     void DeleteMesh();

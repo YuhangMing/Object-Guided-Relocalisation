@@ -24,7 +24,7 @@ System::~System()
     // delete detector;
 }
 
-System::System(bool bSemantic, bool bLoadSMap)
+System::System(bool bSemantic, bool bLoadDiskMap)
     : frame_id(0), reloc_frame_id(0), frame_start_reloc_id(0), is_initialized(false), hasNewKeyFrame(false), b_reloc_attp(false)
 {
     safe_call(cudaGetLastError());
@@ -39,7 +39,10 @@ System::System(bool bSemantic, bool bLoadSMap)
         free_1 = (uint)free_t0/1048576.0 ;
     #endif
     manager = std::make_shared<SubmapManager>();
-    manager->Create(0, true, true);
+    if(bLoadDiskMap)
+        manager->readMapFromDisk();
+    else
+        manager->Create(0, true, true);
     // manager->SetTracker(odometry);
     odometry->SetManager(manager);
     #ifdef CUDA_MEM
@@ -441,8 +444,21 @@ void System::process_images(const cv::Mat depth, const cv::Mat image,
     std::cout << "FINISHED current frame.\n" << std::endl;
 }
 
+
+// system controls
+void System::change_colour_mode(int colour_mode)
+{
+    std::cout << "To be implemented." << std::endl;
+}
+void System::change_run_mode(int run_mode)
+{
+    std::cout << "To be implemented. ";
+    std::cout << "(Switch between SLAM and pure (re)Localisation)";
+    std::cout << std::endl;
+}
 void System::restart()
 {
+    std::cout << "To be implemented." << std::endl;
     // initialPose = last_tracked_frame->pose;
     is_initialized = false;
     frame_id = 0;
@@ -451,12 +467,13 @@ void System::restart()
     odometry->reset();
     // graph->reset();
 }
-
 void System::setLost(bool lost)
 {
     odometry->trackingLost = true;
 }
 
+
+// visualization
 Eigen::Matrix4f System::get_camera_pose() const
 {
     // Eigen::Matrix4f Tmf, Twm; 
@@ -470,51 +487,47 @@ Eigen::Matrix4f System::get_camera_pose() const
     }
     return T;
 }
-
 std::vector<MapStruct *> System::get_dense_maps()
 {
     return manager->getDenseMaps();
 }
 
+
+// save and read maps
 void System::save_mesh_to_file(const char *str)
 {
+    // SavePLY();
 }
-
-size_t System::fetch_mesh_vertex_only(float *vertex)
+void System::writeMapToDisk() const
 {
-    // return manager->active_submaps[renderIdx]->fetch_mesh_vertex_only(vertex);
+    manager->writeMapToDisk();
 }
-
-size_t System::fetch_mesh_with_normal(float *vertex, float *normal)
+void System::readMapFromDisk()
 {
-    // return manager->active_submaps[renderIdx]->fetch_mesh_with_normal(vertex, normal);
+    std::cout << "Reading map from disk..." << std::endl;
+    manager->readMapFromDisk();
 }
 
-size_t System::fetch_mesh_with_colour(float *vertex, unsigned char *colour)
-{
-    // return manager->active_submaps[renderIdx]->fetch_mesh_with_colour(vertex, colour);
-}
 
+// size_t System::fetch_mesh_vertex_only(float *vertex)
+// {
+//     // return manager->active_submaps[renderIdx]->fetch_mesh_vertex_only(vertex);
+// }
+// size_t System::fetch_mesh_with_normal(float *vertex, float *normal)
+// {
+//     // return manager->active_submaps[renderIdx]->fetch_mesh_with_normal(vertex, normal);
+// }
+// size_t System::fetch_mesh_with_colour(float *vertex, unsigned char *colour)
+// {
+//     // return manager->active_submaps[renderIdx]->fetch_mesh_with_colour(vertex, colour);
+// }
 // void System::fetch_key_points(float *points, size_t &count, size_t max)
 // {
 //     manager->GetPoints(points, count, max);
 // }
-
 // void System::fetch_key_points_with_normal(float *points, float *normal, size_t &max_size)
 // {
 // }
-
-void System::writeMapToDisk(std::string file_name) const
-{
-    // mapping->writeMapToDisk(file_name);
-    // manager->active_submaps[0]->writeMapToDisk(file_name);
-}
-
-void System::readMapFromDisk(std::string file_name)
-{
-    // std::cout << "Reading map from " << file_name << std::endl;
-    // manager->active_submaps[0]->readMapFromDisk(file_name);
-}
 
 /* Semantic & Reloc diasbled for now
 void System::relocalize_image(const cv::Mat depth, const cv::Mat image, const fusion::IntrinsicMatrix base)
@@ -1179,5 +1192,95 @@ void System::set_frame_id(size_t id)
     frame_start_reloc_id = id;
 }
 */
+
+// void FuseVoxelMapsAll()
+// {
+//     auto denseMaps = mpMap->GetDenseMaps();
+//     auto denseMapInit = mpMap->GetInitDenseMap();
+//     if (!denseMapInit || denseMaps.size() == 0)
+//         return;
+//     if (denseMapInit->mbInHibernation)
+//         denseMapInit->ReActivate();
+//     denseMapInit->Reserve(800000, 600000, 800000);
+//     denseMapInit->SetActiveFlag(false);
+//     for (auto dmap : denseMaps)
+//     {
+//         if (denseMapInit == dmap || !dmap)
+//             continue;
+//         if (dmap->mbInHibernation)
+//             dmap->ReActivate();
+//         denseMapInit->Fuse(dmap);
+//         dmap->Release();
+//         dmap->mbSubsumed = true;
+//         dmap->mpParent = denseMapInit;
+//         mpMap->EraseDenseMap(dmap);
+//     }
+//     denseMapInit->GenerateMesh();
+//     denseMapInit->SetActiveFlag(false);
+// }
+
+// void SavePLY(const std::string &ply_out)
+// {
+//     FuseVoxelMapsAll();
+//     auto denseMapInit = mpMap->GetInitDenseMap();
+//     if (!denseMapInit)
+//         return;
+//     std::ofstream ply_file(ply_out);
+//     ply_file << "ply\n"
+//                 << "format ascii 1.0\n"
+//                 << "element vertex " << denseMapInit->N / 3 << "\n"
+//                 << "property float x\n"
+//                 << "property float y\n"
+//                 << "property float z\n"
+//                 << "element normal " << denseMapInit->N / 3 << "\n"
+//                 << "property float x\n"
+//                 << "property float y\n"
+//                 << "property float z\n"
+//                 << "element face " << denseMapInit->N / 9 << "\n"
+//                 << "property list uint8 int32 vertex_index\n"
+//                 << "end_header\n";
+//     // ply_file.write(reinterpret_cast<const char *>(denseMapInit->mplPoint), sizeof(float) * denseMapInit->N);
+//     for (int i = 0; i < denseMapInit->N / 3; ++i)
+//     {
+//         for (int j = 0; j < 3; ++j)
+//             ply_file << denseMapInit->mplPoint[i * 3 + j] << " ";
+//         ply_file << "\n";
+//     }
+//     for (int i = 0; i < denseMapInit->N / 3; ++i)
+//     {
+//         for (int j = 0; j < 3; ++j)
+//             ply_file << denseMapInit->mplNormal[i * 3 + j] << " ";
+//         ply_file << "\n";
+//     }
+//     for (int i = 0; i < denseMapInit->N / 9; ++i)
+//     {
+//         ply_file << "3 ";
+//         for (int j = 0; j < 3; ++j)
+//             ply_file << i * 3 + j << " ";
+//         ply_file << "\n";
+//     }
+// }
+
+// void SaveTrajectoryFull(std::string abs_path)
+// {
+//     auto full_trajectory = mpFrameTracker->GetFullTrajectory();
+//     auto time_steps = mpFrameTracker->GetTimeStamps();
+//     std::ofstream file_out(abs_path);
+//     for (int i = 0; i < full_trajectory.size(); ++i)
+//     {
+//         auto quat = full_trajectory[i].second.unit_quaternion();
+//         auto trans = full_trajectory[i].second.translation();
+//         file_out << std::fixed
+//                     << time_steps[i] << " "
+//                     << trans[0] << " "
+//                     << trans[1] << " "
+//                     << trans[2] << " "
+//                     << quat.x() << " "
+//                     << quat.y() << " "
+//                     << quat.z() << " "
+//                     << quat.w() << "\n";
+//     }
+//     file_out.close();
+// }
 
 } // namespace fusion

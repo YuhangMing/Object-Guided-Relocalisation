@@ -22,8 +22,7 @@ int main(int argc, char **argv)
             << std::endl;
 
     SetCalibration();
-    
-    fusion::System slam(GlobalCfg.bSemantic);
+    fusion::System slam(GlobalCfg.bSemantic, GlobalCfg.bLoadDiskMap);
 
     image_counter = 0;
     cv::Mat image, depth;
@@ -52,21 +51,13 @@ int main(int argc, char **argv)
                 window.mbFlagUpdateMesh = true;
 
                 // if(image_counter > num_img[sequence_id-1] || slam.b_reloc_attp)
-                if(image_counter > GlobalCfg.num_img[sequence_id]){
+                // if(image_counter > 100)
+                if(image_counter > GlobalCfg.num_img[sequence_id])
+                {
                     std::cout << "ALL IMAGES LOADED !!!!" << std::endl;
                     window.SetPause();
                 }
             }
-
-            // if (window.IsPaused() && window.mbFlagUpdateMesh)
-            // if (window.mbFlagUpdateMesh)
-            // {
-            //     auto *vertex = window.GetMappedVertexBuffer();
-            //     auto *colour = window.GetMappedColourBuffer();
-            //     window.VERTEX_COUNT = slam.fetch_mesh_with_colour(vertex, colour);
-
-            //     window.mbFlagUpdateMesh = false;
-            // }
             
             window.Render();
         }

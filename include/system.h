@@ -23,9 +23,26 @@ class System
 public:
     ~System();
     System(bool bSemantic=true, bool bLoadSMap=false);
+    
+    // main process function
     void process_images(const cv::Mat depth, const cv::Mat image, 
                         bool bSubmapping, bool bSemantic, bool bRecordSequence);
     
+    // system controls
+    void change_colour_mode(int colour_mode = 0);
+    void change_run_mode(int run_mode = 0);
+    void restart();
+    void setLost(bool lost);
+
+    // visualization
+    Eigen::Matrix4f get_camera_pose() const;
+    std::vector<MapStruct *> get_dense_maps();
+    
+    // save and read maps
+    void save_mesh_to_file(const char *str);
+    void writeMapToDisk() const;
+    void readMapFromDisk();
+
     /* Semantic & Reloc disabled for now.
     // pure relocalization
     void set_frame_id(size_t sid);
@@ -42,37 +59,16 @@ public:
     cv::Mat get_segmented_mask() const;
     */
 
-    // system controls
-    void change_colour_mode(int colour_mode = 0);
-    void change_run_mode(int run_mode = 0);
-    void restart();
-    void setLost(bool lost);
-
-    // visualization
-    Eigen::Matrix4f get_camera_pose() const;
-    std::vector<MapStruct *> get_dense_maps();
-    
-    // create a mesh from the map
-    // and save it to a named file
-    // it only contains vertex data
-    void save_mesh_to_file(const char *str);
-
     // create mesh and store in the address
     // users are reponsible for allocating
     // the adresses in CUDA using `cudaMalloc`
-    size_t fetch_mesh_vertex_only(float *vertex);
-    size_t fetch_mesh_with_normal(float *vertex, float *normal);
-    size_t fetch_mesh_with_colour(float *vertex, unsigned char *colour);
-
+    // size_t fetch_mesh_vertex_only(float *vertex);
+    // size_t fetch_mesh_with_normal(float *vertex, float *normal);
+    // size_t fetch_mesh_with_colour(float *vertex, unsigned char *colour);
     // // key points
     // void fetch_key_points(float *points, size_t &count, size_t max);
     // void fetch_key_points_with_normal(float *points, float *normal, size_t &max_size);
 
-    bool is_initialized;
-    mutable bool b_reloc_attp;
-
-    void writeMapToDisk(std::string file_name) const;
-    void readMapFromDisk(std::string file_name);
     // void recordSequence(std::string dir) const;
     
     /* Semantic & Reloc diasbled for now
@@ -113,32 +109,35 @@ public:
     std::vector<Eigen::Matrix4f> v_MaskRCNN_results;
     std::vector<Eigen::Matrix4f> getMaskRCNNResults() const;
     */
+   
+   // NOT USED CURRENTLY
+   mutable bool b_reloc_attp;
    int reloc_frame_id;
 
 private:
-    // no more separate keyframe structure, keyframe is frame
-    RgbdFramePtr current_frame;
-    RgbdFramePtr current_keyframe;
-
-    size_t frame_id;
-    // size_t sequence_id;
-    size_t frame_start_reloc_id;
-    bool hasNewKeyFrame;
-
-    // System modules
-    // std::shared_ptr<SubMapManager> manager;
+    // Core modules
     std::shared_ptr<SubmapManager> manager;
     std::shared_ptr<DenseOdometry> odometry;
+    // no more separate keyframe structure, keyframe is frame
+    RgbdFramePtr current_frame;
+    // RgbdFramePtr current_keyframe;
 
+    size_t frame_id;
+    bool is_initialized;
     void initialization();
     Sophus::SE3d initialPose;
 
-    cv::cuda::GpuMat device_depth_float;
-    cv::cuda::GpuMat device_image_uchar;
-    cv::cuda::GpuMat device_vmap_cast;
-    cv::cuda::GpuMat device_nmap_cast;
-
+    // NOT USED CURRENTLY
+    // size_t sequence_id;
+    size_t frame_start_reloc_id;
+    bool hasNewKeyFrame;
     int renderIdx;
+
+    // cv::cuda::GpuMat device_depth_float;
+    // cv::cuda::GpuMat device_image_uchar;
+    // cv::cuda::GpuMat device_vmap_cast;
+    // cv::cuda::GpuMat device_nmap_cast;
+
     // std::vector<Sophus::SE3d> gt_pose;
 
     /* Semantic & Reloc disabled for now.

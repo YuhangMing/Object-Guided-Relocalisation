@@ -23,15 +23,17 @@ public:
 	SubmapManager();
 	~SubmapManager();
 
+	void Create(int submapIdx, bool bTrack=false, bool bRender=false);
+	
+	std::vector<MapStruct *> getDenseMaps();
+	void writeMapToDisk();
+	void readMapFromDisk();
+
 	MeshEngine *pMesher;
 	RayTraceEngine *pRayTracer;
 	std::vector< MapStruct * > vActiveSubmaps;
 
-	void Create(int submapIdx, bool bTrack=false, bool bRender=false);
 	void Create(int submapIdx, RgbdImagePtr ref_img, bool bTrack=false, bool bRender=true);
-
-	std::vector<MapStruct *> getDenseMaps();
-
 	void ResetSubmaps();
 
 	/*
@@ -77,7 +79,6 @@ public:
 protected:
 
 private:
-
 	std::mutex mMutexDownload;
 	int ref_frame_id;
 };

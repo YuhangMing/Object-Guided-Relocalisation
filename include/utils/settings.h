@@ -27,6 +27,10 @@ struct Config
     bool bSubmapping = false;
     bool bSemantic = false;
     bool bRecord = false;
+    bool bEnableViewer = true;
+    bool bLoadDiskMap = false;
+    std::string map_file = "map";
+    int mapSize = 1;
     std::string data_folder = "/home/yohann/SLAMs/datasets/BOR/";
     int num_img[10] = {3522, 1237, 887, 1221, 809, 1141, 919, 1470, 501, 870};
 
@@ -74,8 +78,6 @@ struct Config
     // int mFastInitTh = 20;
     // int mFastMinTh = 7;
     // float mfScaleFactor = 1.2;
-
-    bool bEnableViewer = true;
 
     int mMinImageWidth = 0;
     int mMaxImageWidth = 640;

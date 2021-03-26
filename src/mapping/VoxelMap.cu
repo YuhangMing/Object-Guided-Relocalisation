@@ -1013,3 +1013,184 @@ bool MapStruct::isActive()
     std::unique_lock<std::mutex> lock(mMutexActive);
     return mbActive;
 }
+
+void MapStruct::writeToDisk(std::string file_name, bool binary)
+{
+    if(Empty()){
+        std::cout << "[WARNING] Current dense map is empty, nothing to write." << std::endl;
+        return;
+    }
+    std::unique_lock<std::mutex> lock(mutexDeviceMem);
+
+    // download GPU map to CPU
+    mpLinkedListHeadHib = new int[1];
+    mplHeapPtrHib = new int[1];
+    mplBucketMutexHib = new int[bucketSize];
+    mplHeapHib = new int[voxelBlockSize];
+    mplHashTableHib = new HashEntry[hashTableSize];
+    mplVoxelBlocksHib = new Voxel[voxelBlockSize * BlockSize3];
+
+    safe_call(cudaMemcpy(mpLinkedListHeadHib, mpLinkedListHead, sizeof(int), cudaMemcpyDeviceToHost));
+    safe_call(cudaMemcpy(mplHeapPtrHib, mplHeapPtr, sizeof(int), cudaMemcpyDeviceToHost));
+    safe_call(cudaMemcpy(mplBucketMutexHib, mplBucketMutex, sizeof(int) * bucketSize, cudaMemcpyDeviceToHost));
+    safe_call(cudaMemcpy(mplHeapHib, mplHeap, sizeof(int) * voxelBlockSize, cudaMemcpyDeviceToHost));
+    safe_call(cudaMemcpy(mplHashTableHib, mplHashTable, sizeof(HashEntry) * hashTableSize, cudaMemcpyDeviceToHost));
+    safe_call(cudaMemcpy(mplVoxelBlocksHib, mplVoxelBlocks, sizeof(Voxel) * voxelBlockSize * BlockSize3, cudaMemcpyDeviceToHost));
+    // std::cout << *mpLinkedListHeadHib << ", "
+    //           << *mplHeapPtrHib << ", "
+    //           << *mplBucketMutexHib << ", "
+    //           << *mplHeapHib << std::endl;
+
+    // write to files
+    std::ofstream file;
+    if (binary)
+    {
+        file.open(file_name, std::ios::out | std::ios::binary);
+    }
+    else
+    {
+        file.open(file_name, std::ios::out);
+    }
+
+    if (file.is_open())
+    {
+        file.write((const char *)mplVoxelBlocksHib, sizeof(Voxel) * voxelBlockSize * BlockSize3);
+        file.write((const char *)mplHashTableHib, sizeof(HashEntry) * hashTableSize);
+        file.write((const char *)mplHeapHib, sizeof(int) * voxelBlockSize);
+        file.write((const char *)mplBucketMutexHib, sizeof(int) * bucketSize);
+        file.write((const char *)mplHeapPtrHib, sizeof(int));
+        file.write((const char *)mpLinkedListHeadHib, sizeof(int));
+        file.flush();
+    
+        file.close();
+        std::cout << "SUCCESS: map data wrote to disk." << std::endl;
+    } else {
+        std::cout << "FAILED: cannot open map data file." << std::endl;
+    }
+
+    std::ofstream file_param;
+    file_param.open(file_name + ".txt", std::ios::out);
+    if (file_param.is_open())
+    {
+        file_param.write((const char *)&hashTableSize, sizeof(hashTableSize));
+        file_param.write((const char *)&bucketSize, sizeof(bucketSize));
+        file_param.write((const char *)&voxelBlockSize, sizeof(voxelBlockSize));
+        file_param.write((const char *)&voxelSize, sizeof(voxelSize));
+        file_param.write((const char *)&truncationDist, sizeof(truncationDist));
+        file_param.flush();
+
+        file_param.close();
+        std::cout << "SUCCESS: map size wrote to disk." << std::endl;
+    } else {
+        std::cout << "FAILED: map size file cannot open." << std::endl;
+    }
+
+    // release cpu data structures
+    delete mpLinkedListHeadHib;
+    delete mplHeapPtrHib;
+    delete mplBucketMutexHib;
+    delete mplHeapHib;
+    delete mplHashTableHib;
+    delete mplVoxelBlocksHib;
+}
+
+void MapStruct::readFromDisk(std::string file_name, bool binary)
+{
+    bool bAllocateCudaMem = false;
+    if(Empty())
+        bAllocateCudaMem = true;
+    
+    // std::cout << "Reading map size." << std::endl;
+    std::ifstream file_param(file_name + ".txt", std::ios::in);
+    if (file_param.is_open())
+    {
+        file_param.read((char *)&hashTableSize, sizeof(hashTableSize));
+        file_param.read((char *)&bucketSize, sizeof(bucketSize));
+        file_param.read((char *)&voxelBlockSize, sizeof(voxelBlockSize));
+        file_param.read((char *)&voxelSize, sizeof(voxelSize));
+        file_param.read((char *)&truncationDist, sizeof(truncationDist));
+        
+        file_param.close();
+        std::cout << "SUCCESS: map size read from disk." << std::endl;
+    }
+    else
+    {
+        std::cout << "FAILED: cannot open map size file." << std::endl;
+        return;
+    }
+    // std::cout << hashTableSize << ", "
+    //           << bucketSize << ", "
+    //           << voxelBlockSize << ", "
+    //           << voxelSize << ", "
+    //           << truncationDist << std::endl;
+    if(Empty()){
+        std::cout << "FAILED: cannot read map size from disk." << std::endl;
+        return;
+    }
+
+    std::unique_lock<std::mutex> lock(mutexDeviceMem);
+    mpLinkedListHeadHib = new int[1];
+    mplHeapPtrHib = new int[1];
+    mplBucketMutexHib = new int[bucketSize];
+    mplHeapHib = new int[voxelBlockSize];
+    mplHashTableHib = new HashEntry[hashTableSize];
+    mplVoxelBlocksHib = new Voxel[voxelBlockSize * BlockSize3];
+    
+    // read data from file
+    std::ifstream file;
+    if (binary)
+    {
+        file.open(file_name, std::ios::in | std::ios::binary);
+    }
+    else
+    {
+        file.open(file_name, std::ios::in);
+    }
+
+    if (file.is_open())
+    {
+        file.read((char *)mplVoxelBlocksHib, sizeof(Voxel) * voxelBlockSize * BlockSize3);
+        file.read((char *)mplHashTableHib, sizeof(HashEntry) * hashTableSize);
+        file.read((char *)mplHeapHib, sizeof(int) * voxelBlockSize);
+        file.read((char *)mplBucketMutexHib, sizeof(int) * bucketSize);
+        file.read((char *)mplHeapPtrHib, sizeof(int));
+        file.read((char *)mpLinkedListHeadHib, sizeof(int));
+
+        file.close();
+        std::cout << "SUCCESS: map data read from disk." << std::endl;
+    } else {
+        std::cout << "FAILED: cannot open map data file." << std::endl;
+        return;
+    }
+    // std::cout << *mpLinkedListHeadHib << ", "
+    //           << *mplHeapPtrHib << ", "
+    //           << *mplBucketMutexHib << ", "
+    //           << *mplHeapHib << std::endl;
+
+    // upload data from CPU to GPU
+    if(bAllocateCudaMem){
+        safe_call(cudaMalloc((void **)&mpLinkedListHead, sizeof(int)));
+        safe_call(cudaMalloc((void **)&mplHeapPtr, sizeof(int)));
+        safe_call(cudaMalloc((void **)&visibleBlockNum, sizeof(uint)));
+        safe_call(cudaMalloc((void **)&mplBucketMutex, sizeof(int) * bucketSize));
+        safe_call(cudaMalloc((void **)&mplHeap, sizeof(int) * voxelBlockSize));
+        safe_call(cudaMalloc((void **)&mplHashTable, sizeof(HashEntry) * hashTableSize));
+        safe_call(cudaMalloc((void **)&visibleTable, sizeof(HashEntry) * hashTableSize));
+        safe_call(cudaMalloc((void **)&mplVoxelBlocks, sizeof(Voxel) * voxelBlockSize * BlockSize3));
+    }
+
+    safe_call(cudaMemcpy(mpLinkedListHead, mpLinkedListHeadHib, sizeof(int), cudaMemcpyHostToDevice));
+    safe_call(cudaMemcpy(mplHeapPtr, mplHeapPtrHib, sizeof(int), cudaMemcpyHostToDevice));
+    safe_call(cudaMemcpy(mplBucketMutex, mplBucketMutexHib, sizeof(int) * bucketSize, cudaMemcpyHostToDevice));
+    safe_call(cudaMemcpy(mplHeap, mplHeapHib, sizeof(int) * voxelBlockSize, cudaMemcpyHostToDevice));
+    safe_call(cudaMemcpy(mplHashTable, mplHashTableHib, sizeof(HashEntry) * hashTableSize, cudaMemcpyHostToDevice));
+    safe_call(cudaMemcpy(mplVoxelBlocks, mplVoxelBlocksHib, sizeof(Voxel) * voxelBlockSize * BlockSize3, cudaMemcpyHostToDevice));
+
+    // release cpu parameters
+    delete mpLinkedListHeadHib;
+    delete mplHeapPtrHib;
+    delete mplBucketMutexHib;
+    delete mplHeapHib;
+    delete mplHashTableHib;
+    delete mplVoxelBlocksHib;
+}

@@ -2,18 +2,6 @@
 
 #define ENTER_KEY 13
 
-
-
-
-
-
-MainWindow::~MainWindow()
-{
-    // delete keypoints;
-    pangolin::DestroyWindow(WindowName);
-    std::cout << "opengl released. " << std::endl;
-}
-
 MainWindow::MainWindow(const char *name, size_t width, size_t height, bool bDisplay)
     : mbFlagRestart(false), WindowName(name)
     // , mbFlagUpdateMesh(false), VERTEX_COUNT(0), MAX_VERTEX_COUNT(20000000)
@@ -37,6 +25,14 @@ MainWindow::MainWindow(const char *name, size_t width, size_t height, bool bDisp
     // bDisplayOtherPoses = bDisplay;
     // bRecording = false;
 }
+
+MainWindow::~MainWindow()
+{
+    // delete keypoints;
+    pangolin::DestroyWindow(WindowName);
+    std::cout << "opengl released. " << std::endl;
+}
+
 
 void MainWindow::SetupGLFlags()
 {
@@ -385,21 +381,21 @@ void MainWindow::Render()
             UpdateMeshWithNormal();
     }
 
-    if (pangolin::Pushed(*BtnSaveMap))
-    {
-        slam->writeMapToDisk("map.data");
-    }
-
     if (pangolin::Pushed(*BtnSetLost))
     {
         slam->setLost(true);
     }
 
+    if (pangolin::Pushed(*BtnSaveMap))
+    {
+        slam->writeMapToDisk();
+    }
+
     if (pangolin::Pushed(*BtnReadMap))
     {
-        slam->readMapFromDisk("map-lab08.data");
+        slam->readMapFromDisk();
         if (IsPaused())
-            UpdateMeshWithNormal();
+            DrawMesh();
     }
 
     // if(bRecording)
@@ -1081,7 +1077,6 @@ void MainWindow::DeleteMesh()
         if(pMap->mbHasMesh)
             pMap->DeleteMesh();
 
-        
         if(pMap->mbVertexBufferCreated)
         {
             glDeleteBuffers(1, &pMap->mGlVertexBuffer);
