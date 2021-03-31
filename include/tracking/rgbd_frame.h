@@ -8,9 +8,9 @@
 #include <sophus/se3.hpp>
 #include <opencv2/opencv.hpp>
 #include <opencv2/cudaarithm.hpp>
-#include "data_struct/map_cuboid.h"
-#include "data_struct/map_object.h"
 #include "detection/detector.h"
+#include "detection/map_cuboid.h"
+#include "detection/map_object.h"
 
 namespace fusion
 {

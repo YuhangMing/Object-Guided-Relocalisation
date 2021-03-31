@@ -30,13 +30,11 @@ public:
     void SetSystem(fusion::System *sys);
     void SetPause();
 
-    /* Semantic & Reloc diasbled for now
-    void SetDetectedSource(cv::Mat DetectedImage);
-    void SetRenderScene(cv::Mat SceneImage);
-    void SetFeatureImage(cv::Mat featureImage);
-    void SetNOCSMap(cv::Mat SceneImage);
-    void SetMask(cv::Mat mask);
-    */
+    // void SetDetectedSource(cv::Mat DetectedImage);
+    // void SetRenderScene(cv::Mat SceneImage);
+    // void SetFeatureImage(cv::Mat featureImage);
+    // void SetNOCSMap(cv::Mat SceneImage);
+    // void SetMask(cv::Mat mask);
 
     bool IsPaused();
     bool mbFlagRestart;
@@ -78,13 +76,10 @@ private:
     //! Displayed textures
     pangolin::GlTexture TextureRGB;
     pangolin::GlTexture TextureDepth;
-    
-    /* Semantic & Reloc diasbled for now
-    pangolin::GlTexture TextureScene;
-    pangolin::GlTexture TextureNOCSMap;
-    pangolin::GlTexture TextureMask;
-    pangolin::GlTexture TextureDetected;
-    */
+    // pangolin::GlTexture TextureDetected; // merged to RGB
+    // pangolin::GlTexture TextureScene;
+    // pangolin::GlTexture TextureNOCSMap;
+    // pangolin::GlTexture TextureMask;
 
     //! Main 3D View Camera
     std::shared_ptr<pangolin::OpenGlRenderState> CameraView;

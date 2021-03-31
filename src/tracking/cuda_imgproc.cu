@@ -2,8 +2,8 @@
 #include <opencv2/cudawarping.hpp>
 #include "tracking/cuda_imgproc.h"
 #include "utils/safe_call.h"
-#include "math/matrix_type.h"
-#include "math/vector_type.h"
+#include "utils/math/matrix_type.h"
+#include "utils/math/vector_type.h"
 
 namespace fusion
 {

@@ -1,4 +1,4 @@
-#include "data_struct/map_cuboid.h"
+#include "detection/map_cuboid.h"
 #include <ctime>
 
 namespace fusion

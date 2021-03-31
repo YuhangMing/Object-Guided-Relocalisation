@@ -76,17 +76,14 @@ PRIVATE
     src/system.cpp
 
     src/utils/settings.cpp
-    
-    src/data_struct/rgbd_frame.cpp
-    src/data_struct/map_cuboid.cpp
-    src/data_struct/map_object.cpp
 
-    src/tracking/icp_tracker.cpp
     src/tracking/rgbd_odometry.cpp
-    src/tracking/device_image.cpp
-    src/tracking/cuda_imgproc.cu
+    src/tracking/icp_tracker.cpp
     src/tracking/pose_estimator.cu
+    src/tracking/rgbd_frame.cpp
+    src/tracking/device_image.cpp
     src/tracking/build_pyramid.cpp
+    src/tracking/cuda_imgproc.cu
 
     src/mapping/SubmapManager.cpp
     src/mapping/VoxelMap.cu
@@ -102,6 +99,8 @@ PRIVATE
     src/input/azure.cpp
 
     src/detection/detector.cpp
+    src/detection/map_cuboid.cpp
+    src/detection/map_object.cpp
 
     src/optimizer/graph_optimizer.cpp
 )

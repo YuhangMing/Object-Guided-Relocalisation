@@ -35,19 +35,21 @@ int main(int argc, char **argv)
         {
             if (!window.IsPaused() && load_next_image_vil_sequence(depth, image, img_path))
             {
-                window.SetRGBSource(image);
-                window.SetDepthSource(depth);   // raw depth
                 // std::clock_t start = std::clock();
                 slam.process_images(depth, image,
                         GlobalCfg.bSubmapping, GlobalCfg.bSemantic, GlobalCfg.bRecord);
                 // std::cout << "## Processing an image takes "
                     //     << ( std::clock() - start ) / (double) CLOCKS_PER_SEC 
                     //     << " seconds" << std::endl;
-                /* Semantic & Reloc Disabled for now
-                window.SetDetectedSource(slam.get_detected_image());
-                window.SetRenderScene(slam.get_rendered_scene());
-                */
-               
+                
+                if(GlobalCfg.bRecord)
+                    window.SetRGBSource(image);
+                else
+                    window.SetRGBSource(slam.get_detected_image());
+                window.SetDepthSource(depth);   // raw depth
+                // window.SetDetectedSource(slam.get_detected_image());
+                // window.SetRenderScene(slam.get_rendered_scene());
+
                 window.SetCurrentCamera(slam.get_camera_pose());
                 window.mbFlagUpdateMesh = true;
 
@@ -76,13 +78,6 @@ int main(int argc, char **argv)
 
 bool load_next_image_vil_sequence(cv::Mat &depth, cv::Mat &color, std::string img_path)
 {
-	// if(image_counter > num_img[id]){
-    //     std::cout << "!!! REACHED THE END OF THE SEQUENCE. " << std::endl;
-    // 	return false;
-    // }
-    // if(image_counter == num_img[id])
-    // 	std::cout << "LAST IMAGE LOADED !!!!" << std::endl;
-
     // depth
     std::string name_depth = img_path + "/depth/" + std::to_string(image_counter) + ".png";
     depth = cv::imread(name_depth, cv::IMREAD_UNCHANGED);

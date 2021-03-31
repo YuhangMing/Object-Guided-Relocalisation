@@ -1,7 +1,7 @@
 #ifndef DENSE_ODOMETRY_H
 #define DENSE_ODOMETRY_H
 
-#include "data_struct/rgbd_frame.h"
+#include "tracking/rgbd_frame.h"
 #include "tracking/device_image.h"
 #include "tracking/icp_tracker.h"
 #include "tracking/cuda_imgproc.h"

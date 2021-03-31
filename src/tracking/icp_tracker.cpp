@@ -1,10 +1,10 @@
-#include "tracking/build_pyramid.h"
-#include "tracking/pose_estimator.h"
-#include "utils/revertable.h"
-#include "data_struct/rgbd_frame.h"
 #include "tracking/icp_tracker.h"
+#include "tracking/pose_estimator.h"
+#include "tracking/rgbd_frame.h"
 #include "tracking/device_image.h"
+#include "tracking/build_pyramid.h"
 #include "utils/safe_call.h"
+#include "utils/revertable.h"
 
 namespace fusion
 {

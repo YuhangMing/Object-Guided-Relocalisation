@@ -21,7 +21,7 @@ System::~System()
 {
     // graph->terminate();
     // graphThread.join();
-    // delete detector;
+    delete detector;
 }
 
 System::System(bool bSemantic, bool bLoadDiskMap)
@@ -57,8 +57,9 @@ System::System(bool bSemantic, bool bLoadDiskMap)
                 << "   out of " << total_0 << " MB total memroy." << std::endl;
     #endif
 
-    /* Semantic & Reloc disabled for now.
+    /* Reloc disabled for now.
     relocalizer = std::make_shared<Relocalizer>(base);
+    */
     
     if(bSemantic){
     #ifdef CUDA_MEM
@@ -104,26 +105,26 @@ System::System(bool bSemantic, bool bLoadDiskMap)
     // odometry->SetDetector(detector);
     }
 
-    // LOAD SEMANTIC MAPS
-    if(bLoadSMap){
-        manager->readSMapFromDisk("map");
-    }
-    output_file_name = "reloc";
-    pause_window = false;
-    */
+    // ??? change later
+    // // LOAD SEMANTIC MAPS
+    // if(bLoadSMap){
+    //     manager->readSMapFromDisk("map");
+    // }
+    // output_file_name = "reloc";
+    // pause_window = false;
 }
 
 void System::initialization()
 {
     current_frame->pose = initialPose;
     
-    /* Semantic & Reloc diasbled for now
+    // /* Semantic & Reloc diasbled for now
     // set key frame
     current_keyframe = current_frame;
     // graph->add_keyframe(current_keyframe);
     hasNewKeyFrame = true;
     std::cout << "\n-- KeyFrame needed at frame " << current_frame->id << std::endl; 
-    */
+    // */
 
     is_initialized = true;
 
@@ -202,13 +203,13 @@ void System::process_images(const cv::Mat depth, const cv::Mat image,
             // update pose of current_frame and reference_frame in corresponding DeviceImage
             odometry->trackFrame(current_frame);
             
-            /* Semantic & Reloc diasbled for now
+            // /* Semantic & Reloc diasbled for now
             //---- only create kf in the rendering map ----
             if(keyframe_needed() && i == renderIdx && !odometry->trackingLost)
             {
                 create_keyframe();
             }
-            */
+            // */
         }
 
         /* RENDERING */
@@ -280,23 +281,42 @@ void System::process_images(const cv::Mat depth, const cv::Mat image,
             // cv::imshow("vmap after raycast", test_raycasted_vmap);
             // cv::waitKey(0);
 
-            // auto reference_image = odometry->get_reference_image(i);
-            // auto reference_frame = reference_image->get_reference_frame();
-            // // cv::cuda::GpuMat cuImage, cuDepth, cuVMap, cuNMap;
-            // cv::cuda::GpuMat cuImage = reference_image->get_image();
-            // cv::cuda::GpuMat cuDepth = reference_image->get_raw_depth();
-            // Sophus::SE3d Tcm = reference_frame->pose; // transformation from camera to map
-            // std::cout << "Pose used for fusing and raytracing:\n"
-            //           << Tcm.matrix() << std::endl;
-            // // update the map
-            // std::cout << "Map fusing" << std::endl;
-            // manager->active_submaps[i]->update(cuDepth, cuImage, Tcm);
-            // std::cout << "Raytracing " << std::endl;
-            // cv::cuda::GpuMat cuVMap = reference_image->get_vmap();
-            // cv::cuda::GpuMat cuNMap = reference_image->get_nmap(0);
-            // manager->active_submaps[i]->raycast(cuVMap, cuImage, Tcm);
-            // reference_image->resize_device_map(cuVMap); 
-
+            // /*Semantic & Reloc diasbled for now
+            // add new keyframe in the map & calculate cuboids for objects detected
+            if(hasNewKeyFrame && bSemantic){
+                // manager->AddKeyFrame(current_keyframe); // DO WE NEED THIS?
+                reference_image->downloadVNM(odometry->vModelFrames[i], false);
+                // // Store vertex map.
+                // // Store vertex map of current KF as point cloud in the file.
+                // // std::cout << "Type of vmap is ";
+                // // std::cout << odometry->vModelFrames[i]->vmap.type() << std::endl;
+                // std::ofstream pcd_file;
+                // std::string pcd_file_name = "point_cloud_bin_" + std::to_string(frame_id) + ".txt";
+                // pcd_file.open(pcd_file_name, std::ios::app);
+                // int channel = odometry->vModelFrames[i]->vmap.channels();
+                // int rows = odometry->vModelFrames[i]->vmap.rows;
+                // int cols = odometry->vModelFrames[i]->vmap.cols;
+                // float* vmap_data = (float*) odometry->vModelFrames[i]->vmap.data;
+                // if(pcd_file.is_open())
+                // {
+                //     for(int vmapi=0; vmapi < rows*cols; ++vmapi){
+                //         pcd_file << vmap_data[vmapi*4] << "," << vmap_data[vmapi*4+1] << "," 
+                //              << vmap_data[vmapi*4+2] << "," << vmap_data[vmapi*4+3] << "\n";
+                //     } 
+                // }
+                // pcd_file.close();
+                // perform semantic analysis on keyframe
+                extract_semantics(odometry->vModelFrames[i], false, 1, 0.002, 5, 7);
+                if(current_keyframe->numDetection > 0){
+                    std::cout << current_keyframe->numDetection 
+                              << " object instances detected." << std::endl;
+                    // manager->active_submaps[i]->update_objects(odometry->vModelFrames[i]);
+                    // // INTEROGATIVE: Do we actually need this step?
+                    // manager->active_submaps[i]->color_objects(reference_image);
+                    // manager->active_submaps[i]->raycast(reference_image->get_vmap(), reference_image->get_nmap(0), reference_image->get_object_mask(), reference_frame->pose);
+                }
+            }
+            // */
             
             // if(manager->active_submaps[i]->bRender){
             //     // update the map
@@ -409,10 +429,10 @@ void System::process_images(const cv::Mat depth, const cv::Mat image,
     // }
 
     /* OPTIMIZATION */
-    // if (hasNewKeyFrame)
-    // {
-    //     hasNewKeyFrame = false;
-    // }
+    if (hasNewKeyFrame)
+    {
+        hasNewKeyFrame = false;
+    }
 
     // if (bRecordSequence)
     // {
@@ -446,7 +466,7 @@ void System::process_images(const cv::Mat depth, const cv::Mat image,
 }
 
 
-// system controls
+// System Controls
 void System::change_colour_mode(int colour_mode)
 {
     std::cout << "To be implemented." << std::endl;
@@ -473,8 +493,70 @@ void System::setLost(bool lost)
     odometry->trackingLost = true;
 }
 
+// Semantics
+bool System::keyframe_needed() const
+{
+    auto pose = current_frame->pose;
+    auto ref_pose = current_keyframe->pose;
+    //---- create kf more frequently to get more object detection ----
+    // if ((pose.inverse() * ref_pose).translation().norm() > 0.1f)
+    if ((pose.inverse() * ref_pose).translation().norm() > 0.05f)
+    {
+        return true;
+    }
+    return false;
+}
+void System::create_keyframe()
+{
+    current_keyframe = odometry->vModelFrames[renderIdx];
+    // graph->add_keyframe(current_keyframe);
+    hasNewKeyFrame = true;
 
-// visualization
+    std::cout << "\n-- KeyFrame needed at frame " << odometry->vModelFrames[renderIdx]->id << std::endl; 
+}
+void System::extract_objects(RgbdFramePtr frame, bool bGeoSeg, float lamb, float tao, int win_size, int thre)
+{
+    frame->ExtractObjects(detector, false, true, false);   
+    if(bGeoSeg){
+        cv::Mat edge(frame->row_frame, frame->col_frame, CV_8UC1);
+        auto current_keyimage = (!is_initialized || odometry->trackingLost) ? 
+                                odometry->get_current_image() : 
+                                odometry->get_reference_image(renderIdx);
+        current_keyimage->GeometricRefinement(lamb, tao, win_size, edge);
+        
+        frame->FuseMasks(edge, thre);
+    }
+    // odometry->vModelDeviceMapPyramid[renderIdx]->upload_semantics(frame);
+    odometry->upload_semantics(frame, renderIdx);
+    // std::cout << "-- number of objects detected: " << frame->numDetection << std::endl;
+}
+void System::extract_planes(RgbdFramePtr frame)
+{
+    // perform k-means on all the background normals
+    // first cpu then gpu later
+    // at most 3 clusters, x, y, z plane, so start from three and merge later.
+    frame->ExtractPlanes();
+}
+void System::extract_semantics(RgbdFramePtr frame, bool bGeoSeg, float lamb, float tao, int win_size, int thre)
+{
+    frame->ExtractSemantics(detector, false, true, false);
+    // frame->ExtractObjects(detector, false, true, false);
+    if(bGeoSeg){
+        cv::Mat edge(frame->row_frame, frame->col_frame, CV_8UC1);
+        auto current_keyimage = (!is_initialized || odometry->trackingLost) ? 
+                                odometry->get_current_image() : 
+                                odometry->get_reference_image(renderIdx);
+        current_keyimage->GeometricRefinement(lamb, tao, win_size, edge);
+        
+        frame->FuseMasks(edge, thre);
+    }
+    // odometry->vModelDeviceMapPyramid[renderIdx]->upload_semantics(frame);
+    odometry->upload_semantics(frame, renderIdx);
+    // std::cout << "-- number of objects detected: " << frame->numDetection << std::endl;
+}
+
+
+// Visualization
 Eigen::Matrix4f System::get_camera_pose() const
 {
     // Eigen::Matrix4f Tmf, Twm; 
@@ -492,9 +574,13 @@ std::vector<MapStruct *> System::get_dense_maps()
 {
     return manager->getDenseMaps();
 }
+cv::Mat System::get_detected_image()
+{
+    return current_keyframe->image;
+}
 
 
-// save and read maps
+// Save & Read Maps
 void System::save_mesh_to_file(const char *str)
 {
     // SavePLY();
@@ -859,74 +945,6 @@ void System::relocalization()
     std::cout << "#### Relocalization process takes "
                 << ( std::clock() - start ) / (double) CLOCKS_PER_SEC 
                 << " seconds; " << std::endl;
-}
-
-bool System::keyframe_needed() const
-{
-    auto pose = current_frame->pose;
-    auto ref_pose = current_keyframe->pose;
-    //---- create kf more frequently to get more object detection ----
-    // if ((pose.inverse() * ref_pose).translation().norm() > 0.1f)
-    if ((pose.inverse() * ref_pose).translation().norm() > 0.05f)
-    {
-        return true;
-    }
-    return false;
-}
-
-void System::create_keyframe()
-{
-    current_keyframe = odometry->vModelFrames[renderIdx];
-    // graph->add_keyframe(current_keyframe);
-    hasNewKeyFrame = true;
-
-    std::cout << "\n-- KeyFrame needed at frame " << odometry->vModelFrames[renderIdx]->id << std::endl; 
-}
-
-void System::extract_objects(RgbdFramePtr frame, bool bGeoSeg, float lamb, float tao, int win_size, int thre)
-{
-    frame->ExtractObjects(detector, false, true, false);   
-    if(bGeoSeg){
-        cv::Mat edge(frame->row_frame, frame->col_frame, CV_8UC1);
-        auto current_keyimage = (!is_initialized || odometry->trackingLost) ? 
-                                odometry->get_current_image() : 
-                                odometry->get_reference_image(renderIdx);
-        current_keyimage->GeometricRefinement(lamb, tao, win_size, edge);
-        
-        frame->FuseMasks(edge, thre);
-    }
-    // odometry->vModelDeviceMapPyramid[renderIdx]->upload_semantics(frame);
-    odometry->upload_semantics(frame, renderIdx);
-    // std::cout << "-- number of objects detected: " << frame->numDetection << std::endl;
-}
-void System::extract_planes(RgbdFramePtr frame)
-{
-    // perform k-means on all the background normals
-    // first cpu then gpu later
-    // at most 3 clusters, x, y, z plane, so start from three and merge later.
-    frame->ExtractPlanes();
-}
-void System::extract_semantics(RgbdFramePtr frame, bool bGeoSeg, float lamb, float tao, int win_size, int thre)
-{
-    frame->ExtractSemantics(detector, false, true, false);
-    // frame->ExtractObjects(detector, false, true, false);
-    if(bGeoSeg){
-        cv::Mat edge(frame->row_frame, frame->col_frame, CV_8UC1);
-        auto current_keyimage = (!is_initialized || odometry->trackingLost) ? 
-                                odometry->get_current_image() : 
-                                odometry->get_reference_image(renderIdx);
-        current_keyimage->GeometricRefinement(lamb, tao, win_size, edge);
-        
-        frame->FuseMasks(edge, thre);
-    }
-    // odometry->vModelDeviceMapPyramid[renderIdx]->upload_semantics(frame);
-    odometry->upload_semantics(frame, renderIdx);
-    // std::cout << "-- number of objects detected: " << frame->numDetection << std::endl;
-}
-
-cv::Mat System::get_detected_image()
-{
-    return current_keyframe->image;
 }
 
 cv::Mat System::get_shaded_depth()

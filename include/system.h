@@ -4,8 +4,8 @@
 #include <thread>
 #include <eigen3/Eigen/Core>
 #include <opencv2/opencv.hpp>
-#include "data_struct/rgbd_frame.h"
 #include "detection/detector.h"
+#include "tracking/rgbd_frame.h"
 #include "tracking/rgbd_odometry.h"
 #include "mapping/SubmapManager.h"
 #include "mapping/VoxelMap.h"
@@ -37,6 +37,7 @@ public:
     // visualization
     Eigen::Matrix4f get_camera_pose() const;
     std::vector<MapStruct *> get_dense_maps();
+    cv::Mat get_detected_image();
     
     // save and read maps
     void save_mesh_to_file(const char *str);
@@ -52,7 +53,6 @@ public:
     void relocalization();
 
     // get rendered ray tracing map
-    cv::Mat get_detected_image();
     cv::Mat get_shaded_depth();
     cv::Mat get_rendered_scene() const;
     cv::Mat get_rendered_scene_textured() const;
@@ -120,14 +120,21 @@ private:
     // Core modules
     std::shared_ptr<SubmapManager> manager;
     std::shared_ptr<DenseOdometry> odometry;
-    // no more separate keyframe structure, keyframe is frame
-    RgbdFramePtr current_frame;
-    // RgbdFramePtr current_keyframe;
+    RgbdFramePtr current_frame, current_keyframe;
 
     size_t frame_id;
     bool is_initialized;
     void initialization();
     Sophus::SE3d initialPose;
+    
+    // semantic analysis
+    semantic::Detector * detector;
+    bool keyframe_needed() const;
+    void create_keyframe();
+    void extract_objects(RgbdFramePtr frame, bool bGeoSeg, float lamb, float tao, int win_size, int thre);
+    void extract_planes(RgbdFramePtr frame);
+    void extract_semantics(RgbdFramePtr frame, bool bGeoSeg, float lamb, float tao, int win_size, int thre);
+
 
     // NOT USED CURRENTLY
     // size_t sequence_id;
@@ -142,19 +149,11 @@ private:
 
     // std::vector<Sophus::SE3d> gt_pose;
 
-    /* Semantic & Reloc disabled for now.
+    /* Reloc disabled for now.
     std::shared_ptr<Relocalizer> relocalizer;
-    // NOCS * nocsdetector;
-    semantic::Detector * detector;
+        */
 
-    bool keyframe_needed() const;
-    void create_keyframe();
-
-    // semantic analysis
-    void extract_objects(RgbdFramePtr frame, bool bGeoSeg, float lamb, float tao, int win_size, int thre);
-    void extract_planes(RgbdFramePtr frame);
-    void extract_semantics(RgbdFramePtr frame, bool bGeoSeg, float lamb, float tao, int win_size, int thre);
-    */
+    
 };
 
 } // namespace fusion

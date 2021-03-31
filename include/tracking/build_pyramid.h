@@ -1,7 +1,7 @@
 #ifndef FUSION_BUILD_PYRAMID_H
 #define FUSION_BUILD_PYRAMID_H
 
-#include "macros.h"
+#include "utils/macros.h"
 #include "tracking/cuda_imgproc.h"
 
 namespace fusion

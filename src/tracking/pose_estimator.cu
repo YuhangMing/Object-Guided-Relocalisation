@@ -1,8 +1,8 @@
 #include "tracking/pose_estimator.h"
-#include "math/matrix_type.h"
-#include "math/vector_type.h"
-#include "utils/safe_call.h"
 #include "tracking/reduce_sum.h"
+#include "utils/safe_call.h"
+#include "utils/math/matrix_type.h"
+#include "utils/math/vector_type.h"
 #include <thrust/device_vector.h>
 
 namespace fusion

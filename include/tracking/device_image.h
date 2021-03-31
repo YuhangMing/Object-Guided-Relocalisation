@@ -7,7 +7,7 @@
 #include <opencv2/opencv.hpp>
 // #include <opencv2/improc.hpp>
 #include <opencv2/cudaarithm.hpp>
-#include "data_struct/rgbd_frame.h"
+#include "tracking/rgbd_frame.h"
 
 /*
 Data structure to store all cv::cuda::GpuMat 

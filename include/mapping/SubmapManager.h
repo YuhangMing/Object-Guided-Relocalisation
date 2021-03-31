@@ -6,7 +6,7 @@
 #include <sophus/se3.hpp>
 #include <mutex>
 #include "system.h"
-#include "data_struct/rgbd_frame.h"
+#include "tracking/rgbd_frame.h"
 #include "mapping/VoxelMap.h"
 #include "mapping/RayTraceEngine.h"
 #include "mapping/MeshEngine.h"

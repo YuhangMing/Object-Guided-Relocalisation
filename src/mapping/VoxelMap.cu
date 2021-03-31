@@ -87,7 +87,7 @@ MapStruct::MapStruct(const Eigen::Matrix3f &K)
 {
     // Get a random colour taint for visualization
     mColourTaint = abs(255 * rand() / (double)RAND_MAX);
-    std::cout << "Color Taint = " << mColourTaint << std::endl;
+    // std::cout << "Color Taint = " << mColourTaint << std::endl;
     mnId = nNextId++;
 }
 

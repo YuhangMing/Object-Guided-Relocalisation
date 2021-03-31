@@ -4,7 +4,7 @@
 #include <memory>
 #include <sophus/se3.hpp>
 #include <opencv2/opencv.hpp>
-#include "data_struct/rgbd_frame.h"
+#include "tracking/rgbd_frame.h"
 #include "tracking/device_image.h"
 
 namespace fusion

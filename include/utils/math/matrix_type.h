@@ -1,8 +1,8 @@
 #ifndef FUSION_MATH_ROTATION_H
 #define FUSION_MATH_ROTATION_H
 
-#include "macros.h"
-#include "math/vector_type.h"
+#include "utils/macros.h"
+#include "utils/math/vector_type.h"
 
 namespace fusion
 {

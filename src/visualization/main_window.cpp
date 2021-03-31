@@ -151,43 +151,41 @@ void MainWindow::InitTextures()
         GL_UNSIGNED_BYTE,
         NULL);
 
-    /* Semantic & Reloc diasbled for now
-    TextureDetected.Reinitialise(
-        640, 480,
-        GL_RGB,
-        true,
-        0,
-        GL_RGB,
-        GL_UNSIGNED_BYTE,
-        NULL);
+    // TextureDetected.Reinitialise(
+    //     640, 480,
+    //     GL_RGB,
+    //     true,
+    //     0,
+    //     GL_RGB,
+    //     GL_UNSIGNED_BYTE,
+    //     NULL);
 
-    TextureScene.Reinitialise(
-        640, 480,
-        GL_RGBA,
-        true,
-        0,
-        GL_RGBA,
-        GL_UNSIGNED_BYTE,
-        NULL);
+    // TextureScene.Reinitialise(
+    //     640, 480,
+    //     GL_RGBA,
+    //     true,
+    //     0,
+    //     GL_RGBA,
+    //     GL_UNSIGNED_BYTE,
+    //     NULL);
 
-    TextureNOCSMap.Reinitialise(
-        640, 480,
-        GL_RGB,
-        true,
-        0,
-        GL_RGB,
-        GL_UNSIGNED_BYTE,
-        NULL);
+    // TextureNOCSMap.Reinitialise(
+    //     640, 480,
+    //     GL_RGB,
+    //     true,
+    //     0,
+    //     GL_RGB,
+    //     GL_UNSIGNED_BYTE,
+    //     NULL);
 
-    TextureMask.Reinitialise(
-        640, 480,
-        GL_LUMINANCE,
-        true,
-        0,
-        GL_LUMINANCE,
-        GL_UNSIGNED_BYTE,
-        NULL);
-    */
+    // TextureMask.Reinitialise(
+    //     640, 480,
+    //     GL_LUMINANCE,
+    //     true,
+    //     0,
+    //     GL_LUMINANCE,
+    //     GL_UNSIGNED_BYTE,
+    //     NULL);
 }
 
 void MainWindow::InitMeshBuffers()
@@ -374,32 +372,26 @@ void MainWindow::SetDepthSource(cv::Mat DepthImage)
     TextureDepth.Upload(Depth_8bit.data, GL_LUMINANCE, GL_UNSIGNED_BYTE);
 }
 
-/* Semantic disabled for now
-void MainWindow::SetDetectedSource(cv::Mat DetectedImage)
-{
-    TextureDetected.Upload(DetectedImage.data, GL_RGB, GL_UNSIGNED_BYTE);
-}
-
-void MainWindow::SetRenderScene(cv::Mat SceneImage)
-{
-    TextureScene.Upload(SceneImage.data, GL_RGBA, GL_UNSIGNED_BYTE);
-}
-
-void MainWindow::SetNOCSMap(cv::Mat SceneImage)
-{
-    TextureNOCSMap.Upload(SceneImage.data, GL_RGB, GL_UNSIGNED_BYTE);
-}
-
-void MainWindow::SetMask(cv::Mat mask)
-{
-    if(!mask.empty())
-        TextureMask.Upload(mask.data, GL_LUMINANCE, GL_UNSIGNED_BYTE);
-}
-
-void MainWindow::SetFeatureImage(cv::Mat featureImage)
-{
-}
-*/
+// void MainWindow::SetDetectedSource(cv::Mat DetectedImage)
+// {
+//     TextureDetected.Upload(DetectedImage.data, GL_RGB, GL_UNSIGNED_BYTE);
+// }
+// void MainWindow::SetRenderScene(cv::Mat SceneImage)
+// {
+//     TextureScene.Upload(SceneImage.data, GL_RGBA, GL_UNSIGNED_BYTE);
+// }
+// void MainWindow::SetNOCSMap(cv::Mat SceneImage)
+// {
+//     TextureNOCSMap.Upload(SceneImage.data, GL_RGB, GL_UNSIGNED_BYTE);
+// }
+// void MainWindow::SetMask(cv::Mat mask)
+// {
+//     if(!mask.empty())
+//         TextureMask.Upload(mask.data, GL_LUMINANCE, GL_UNSIGNED_BYTE);
+// }
+// void MainWindow::SetFeatureImage(cv::Mat featureImage)
+// {
+// }
 
 
 void MainWindow::Render()
@@ -442,7 +434,7 @@ void MainWindow::Render()
         }
     }
 
-    // if(bRecording)
+    // if(GlobalCfg.bRecord)
     // {
         if (*BoxDisplayScene)
         {
@@ -460,7 +452,8 @@ void MainWindow::Render()
     //     if (*BoxDisplayScene)
     //     {
     //         mpViewRelocView->Activate();
-    //         TextureScene.RenderToViewportFlipY();
+    //         TextureDepth.RenderToViewportFlipY();
+    //         // TextureScene.RenderToViewportFlipY();
     //     }
     //     if (*BoxDisplayImage)
     //     {

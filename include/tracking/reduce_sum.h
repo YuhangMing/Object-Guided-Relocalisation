@@ -1,7 +1,7 @@
 #ifndef FUSION_ICP_REDUCE_SUM_H
 #define FUSION_ICP_REDUCE_SUM_H
 
-#include "macros.h"
+#include "utils/macros.h"
 
 #define MAX_WARP_SIZE 32
 

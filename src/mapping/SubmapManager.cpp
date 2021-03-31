@@ -1,5 +1,5 @@
 #include "mapping/SubmapManager.h"
-#include "data_struct/map_cuboid.h"
+#include "detection/map_cuboid.h"
 #include "utils/settings.h"
 #include <ctime>
 

@@ -3,7 +3,7 @@
 
 #include <cmath>
 #include <sophus/se3.hpp>
-#include "macros.h"
+#include "utils/macros.h"
 
 namespace fusion
 {

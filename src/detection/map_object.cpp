@@ -1,4 +1,4 @@
-#include "data_struct/map_object.h"
+#include "detection/map_object.h"
 
 namespace fusion
 {

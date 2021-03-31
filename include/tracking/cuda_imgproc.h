@@ -3,7 +3,7 @@
 
 #include <sophus/se3.hpp>
 #include <opencv2/cudaarithm.hpp>
-#include "macros.h"
+#include "utils/macros.h"
 
 namespace fusion
 {

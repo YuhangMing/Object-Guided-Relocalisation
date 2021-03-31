@@ -25,7 +25,7 @@ typedef Sophus::SE3d PoseType;
 struct Config
 {
     bool bSubmapping = false;
-    bool bSemantic = false;
+    bool bSemantic = true;
     bool bRecord = false;
     bool bEnableViewer = true;
     bool bLoadDiskMap = false;
