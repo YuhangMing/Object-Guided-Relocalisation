@@ -99,7 +99,8 @@ private:
     std::shared_ptr<pangolin::Var<bool>> BoxDisplayImage;
     // std::shared_ptr<pangolin::Var<bool>> BoxDisplayDepth;
     std::shared_ptr<pangolin::Var<bool>> BoxDisplayScene;
-    std::shared_ptr<pangolin::Var<int>> BarSwitchMap;
+    // std::shared_ptr<pangolin::Var<int>> BarSwitchMap;
+    std::shared_ptr<pangolin::Var<int>> BarSwitchSubmap;
     std::shared_ptr<pangolin::Var<bool>> BoxDisplayCamera;
     /* Semantic & Reloc diasbled for now
     std::shared_ptr<pangolin::Var<bool>> BoxDisplayDetected;
@@ -120,7 +121,7 @@ private:
     */
 
     //! New Draw Mesh Function
-    void DrawMesh();
+    void DrawMesh(int idx);
     void DeleteMesh();
 
     //! Acquire Mehs Functions

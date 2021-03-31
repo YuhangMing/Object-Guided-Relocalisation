@@ -13,7 +13,6 @@ Sophus::SE3d MapStruct::GetPose()
     std::unique_lock<std::mutex> lock(mMutexPose);
     return mTcw;
 }
-
 void MapStruct::SetPose(const Sophus::SE3d &Tcw)
 {
     std::unique_lock<std::mutex> lock(mMutexPose);
@@ -87,7 +86,8 @@ MapStruct::MapStruct(const Eigen::Matrix3f &K)
       mbVertexBufferCreated(false), mbSubsumed(false), mpParent(nullptr)
 {
     // Get a random colour taint for visualization
-    mColourTaint = 255 * rand() / (double)RAND_MAX;
+    mColourTaint = abs(255 * rand() / (double)RAND_MAX);
+    std::cout << "Color Taint = " << mColourTaint << std::endl;
     mnId = nNextId++;
 }
 
@@ -1115,7 +1115,7 @@ void MapStruct::readFromDisk(std::string file_name, bool binary)
     }
     else
     {
-        std::cout << "FAILED: cannot open map size file." << std::endl;
+        std::cout << "FAILED: cannot open the map size file." << std::endl;
         return;
     }
     // std::cout << hashTableSize << ", "
@@ -1159,7 +1159,7 @@ void MapStruct::readFromDisk(std::string file_name, bool binary)
         file.close();
         std::cout << "SUCCESS: map data read from disk." << std::endl;
     } else {
-        std::cout << "FAILED: cannot open map data file." << std::endl;
+        std::cout << "FAILED: cannot open the map data file." << std::endl;
         return;
     }
     // std::cout << *mpLinkedListHeadHib << ", "

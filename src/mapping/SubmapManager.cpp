@@ -45,6 +45,9 @@ void SubmapManager::Create(int submapIdx, bool bTrack, bool bRender)
 	// bHasNewSM = false;
 	renderIdx = submapIdx;
 	ref_frame_id = 0;
+
+	//!! Remove vPoses after orthogonal issue in pose loading
+	vSubmapPoses.push_back(Sophus::SE3d().matrix());
 }
 
 std::vector<MapStruct *> SubmapManager::getDenseMaps()
@@ -54,38 +57,132 @@ std::vector<MapStruct *> SubmapManager::getDenseMaps()
 
 void SubmapManager::writeMapToDisk()
 {
+	std::string pose_file_name = GlobalCfg.map_file + "_poses.txt";
+	std::vector<Eigen::Matrix4d> vPoseMaps;
 	for(int i=0; i<vActiveSubmaps.size(); ++i)
 	{
 		std::string file_name = GlobalCfg.map_file + "_" + std::to_string(i) + ".data";
 		auto pDenseMap = vActiveSubmaps[i];
+		vPoseMaps.push_back(pDenseMap->GetPose().matrix());
 		pDenseMap->writeToDisk(file_name);
 	}
+	
+	writePosesToText(pose_file_name, vPoseMaps);
+}
+
+void SubmapManager::writePosesToText(std::string file_name, 
+									std::vector<Eigen::Matrix4d> vPoses)
+{
+	std::ofstream pose_file;
+	pose_file.open(file_name, std::ios::out);
+	if(pose_file.is_open())
+	{
+		for(auto Tmw : vPoses)
+		{
+			Eigen::Matrix4f fTmw = Tmw.cast<float>();
+			Eigen::Matrix3f rot = fTmw.topLeftCorner<3,3>();
+			Eigen::Vector3f trans = fTmw.topRightCorner<3,1>();
+			Eigen::Quaternionf quat(rot);
+			// std::cout << rot << std::endl << trans << std::endl;
+			// std::cout << quat.x() << ", " << quat.y() << ", " << quat.z() << ", " << quat.w() << std::endl;
+			pose_file << 0 << " " 
+					<< trans(0) << " " << trans(1) << " " << trans(2) << " "
+					<< quat.x() << " " << quat.y() << " " << quat.z() << " " << quat.w()
+					<< "\n";			
+		}
+	}
+	else
+	{
+		std::cout << "FAILED: cannot open the pose file." << std::endl;
+	}
+	pose_file.close();
 }
 
 void SubmapManager::readMapFromDisk()
-{	
+{
+	// read the map poses
+	std::string pose_file_name = GlobalCfg.map_file + "_poses.txt";
+	// std::vector<Eigen::Matrix4d> vSubmapPoses;
+	readPosesFromText(pose_file_name, vSubmapPoses);
+	std::cout << "- " << vSubmapPoses.size() << " map poses loaded." << std::endl;
+
+	// update already existed map
 	for(int i=0; i<vActiveSubmaps.size(); ++i)
 	{
 		std::string file_name = GlobalCfg.map_file + "_" + std::to_string(i) + ".data";	
-		std::cout << "Reading from file: " << file_name << std::endl;
+		std::cout << "Reading the dense map from file: " << file_name << std::endl;
 		auto pDenseMap = vActiveSubmaps[i];
 		pDenseMap->readFromDisk(file_name);
+		pDenseMap->SetPose(Sophus::SE3d()); //vPoseMaps[i]
 	}
+
+	// create new dense maps, if necessary
 	int num_active_maps = vActiveSubmaps.size();
 	for(int i=num_active_maps; i<GlobalCfg.mapSize; ++i)
 	{
 		std::string file_name = GlobalCfg.map_file + "_" + std::to_string(i) + ".data";
+		std::cout << "Reading the dense map from file: " << file_name << std::endl;
 		auto pDenseMap = new MapStruct(GlobalCfg.K);
 		pDenseMap->SetMeshEngine(pMesher);
 		pDenseMap->SetTracer(pRayTracer);
 		pDenseMap->readFromDisk(file_name);
-		pDenseMap->SetPose(Sophus::SE3d());
+		pDenseMap->SetPose(Sophus::SE3d()); //vPoseMaps[i]
 
 		vActiveSubmaps.push_back(pDenseMap);
 
-		renderIdx = i; // ?? set to i or 0 here???
+		renderIdx = 0; // ?? set to i or 0 here???
 		ref_frame_id = 0;
 	}
+}
+
+void SubmapManager::readPosesFromText(std::string file_name, 
+									  std::vector<Eigen::Matrix4d>& vPoses)
+{
+	vPoses.clear();
+    std::ifstream pose_file(file_name);
+    if(pose_file.is_open())
+    {
+        std::string one_line;
+        while(std::getline(pose_file, one_line))
+        {
+            std::istringstream ss(one_line);
+            double qua[4];
+            double trans[3];
+            for(size_t i=0; i<8; ++i){
+                double one_val;
+                ss >> one_val;
+                if(i == 0){
+                    // std::cout << one_val << std::endl;
+                    continue;
+                }
+                if(i < 4){
+                    trans[i-1] = one_val;
+                } else {
+                    qua[i-4] = one_val;
+                }
+            }
+            Eigen::Quaterniond q(qua);
+            Eigen::Vector3d t(trans[0], trans[1], trans[2]);
+            std::cout << q.x() << ", " << q.y() << ", " << q.z() << ", " << q.w()
+                      << ", " << t(0) << ", " << t(1) << ", " << t(2) << std::endl;
+            Eigen::Matrix3d Rot = q.toRotationMatrix();
+			// // Enforce orthogonal requirement !!!!!!! WRONG ROTATION RETURNED
+			// Eigen::JacobiSVD<Eigen::Matrix3d> svd(Rot, Eigen::ComputeThinU | Eigen::ComputeThinV);
+			// // std::cout << "Its singular values are:" << std::endl << svd.singularValues() << std::endl;
+			// // std::cout << "Its left singular vectors are the columns of the thin U matrix:" << std::endl << svd.matrixU() << std::endl;
+			// // std::cout << "Its right singular vectors are the columns of the thin V matrix:" << std::endl << svd.matrixV() << std::endl;
+			// Rot = svd.matrixU() * svd.matrixV();
+            Eigen::Matrix4d T = Eigen::Matrix4d::Identity();
+            T.topLeftCorner(3,3) = Rot;
+            T.topRightCorner(3,1) = t;
+            vPoses.push_back(T);
+        }
+    }
+    else
+    {
+        std::cout << "FAILED: cannot find " << file_name << std::endl;
+    }
+    pose_file.close();
 }
 
 void SubmapManager::ResetSubmaps(){

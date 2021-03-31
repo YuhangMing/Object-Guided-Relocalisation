@@ -28,6 +28,11 @@ public:
 	std::vector<MapStruct *> getDenseMaps();
 	void writeMapToDisk();
 	void readMapFromDisk();
+	void writePosesToText(std::string file_name, std::vector<Eigen::Matrix4d> vPoses);
+	void readPosesFromText(std::string file_name, std::vector<Eigen::Matrix4d>& vPoses);
+	
+	//!! Remove vPoses after orthogonal issue in pose loading
+	std::vector<Eigen::Matrix4d> vSubmapPoses;
 
 	MeshEngine *pMesher;
 	RayTraceEngine *pRayTracer;

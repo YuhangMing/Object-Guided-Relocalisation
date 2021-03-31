@@ -25,7 +25,8 @@ System::~System()
 }
 
 System::System(bool bSemantic, bool bLoadDiskMap)
-    : frame_id(0), reloc_frame_id(0), frame_start_reloc_id(0), is_initialized(false), hasNewKeyFrame(false), b_reloc_attp(false)
+    : frame_id(0), reloc_frame_id(0), frame_start_reloc_id(0), 
+    is_initialized(false), hasNewKeyFrame(false), b_reloc_attp(false)
 {
     safe_call(cudaGetLastError());
     odometry = std::make_shared<DenseOdometry>();
@@ -506,6 +507,11 @@ void System::readMapFromDisk()
 {
     std::cout << "Reading map from disk..." << std::endl;
     manager->readMapFromDisk();
+}
+//!! Remove vPoses after orthogonal issue in pose loading
+std::vector<Eigen::Matrix4d> System::readMapPoses()
+{
+    return manager->vSubmapPoses;
 }
 
 

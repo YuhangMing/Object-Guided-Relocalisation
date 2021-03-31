@@ -29,10 +29,13 @@ struct Config
     bool bRecord = false;
     bool bEnableViewer = true;
     bool bLoadDiskMap = false;
-    std::string map_file = "map";
-    int mapSize = 1;
+    
     std::string data_folder = "/home/yohann/SLAMs/datasets/BOR/";
+    // consider directly load all filenames in the directly
+    // and remove the dependency on this array
     int num_img[10] = {3522, 1237, 887, 1221, 809, 1141, 919, 1470, 501, 870};
+    std::string map_file = "map";
+    int mapSize = 4;
 
     int mCurrentFrameId = 0;
     bool mbEnableDebugLogs = false;

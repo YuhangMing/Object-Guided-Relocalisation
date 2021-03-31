@@ -3,8 +3,8 @@
 #define ENTER_KEY 13
 
 MainWindow::MainWindow(const char *name, size_t width, size_t height, bool bDisplay)
-    : mbFlagRestart(false), WindowName(name)
-    // , mbFlagUpdateMesh(false), VERTEX_COUNT(0), MAX_VERTEX_COUNT(20000000)
+    : mbFlagRestart(false), WindowName(name), mbFlagUpdateMesh(false)
+    // , VERTEX_COUNT(0), MAX_VERTEX_COUNT(20000000)
     // , sizeKeyPoint(0),maxSizeKeyPoint(8000000)
 {
     ResetAllFlags();
@@ -65,6 +65,7 @@ void MainWindow::SetupDisplays()
     
     // display name, current val, min, max;
     // BarSwitchMap = std::make_shared<pangolin::Var<int>>("Menu.Display Map", 1, 0, 2);
+    BarSwitchSubmap = std::make_shared<pangolin::Var<int>>("Menu.Submaps", 0, 0, GlobalCfg.mapSize);
     BoxDisplayCamera = std::make_shared<pangolin::Var<bool>>("Menu.Current Camera", true, true);
     
     /* Semantic disabled for now
@@ -245,6 +246,7 @@ void MainWindow::InitMeshBuffers()
 
 void MainWindow::InitGlSlPrograms()
 {
+    // Shading w.r.t. the normal directions
     const char vertexShader[] =
         "#version 330\n"
         "\n"
@@ -275,6 +277,41 @@ void MainWindow::InitGlSlPrograms()
         "    float Ix = max(0.0, min(255.0, i1 + i2 + i3));\n"
         "    shaded_colour = vec3(Ix, Ix, Ix);\n"
         "}\n";
+
+    // TODO: how to better assign different color to different submaps.
+    // // assign different uni-color to different submaps
+    // const char vertexShader[] =
+    //     "#version 330\n"
+    //     "\n"
+    //     "layout(location = 0) in vec3 position;\n"
+    //     "layout(location = 1) in vec3 a_normal;\n"
+    //     "uniform mat4 mvpMat;\n"
+    //     "uniform mat4 Tmw;\n"
+    //     "uniform float colourTaint;\n"
+    //     "out vec3 shaded_colour;\n"
+    //     "\n"
+    //     "void main(void) {\n"
+    //     "    gl_Position = mvpMat * Tmw * vec4(position, 1.0);\n"
+    //     "    vec3 lightpos = vec3(5, 5, 5);\n"
+    //     "    const float ka = 0.3;\n"
+    //     "    const float kd = 0.5;\n"
+    //     "    const float ks = 0.2;\n"
+    //     "    const float n = 20.0;\n"
+    //     "    float ax = 1.0;\n"
+    //     "    float dx = 1.0;\n"
+    //     "    float sx = 1.0;\n"
+    //     "    const float lx = 1.0;\n"
+    //     "    vec3 L = normalize(lightpos - position);\n"
+    //     "    vec3 V = normalize(vec3(0.0) - position);\n"
+    //     "    vec3 R = normalize(2 * a_normal * dot(a_normal, L) - L);\n"
+    //     "    float i1 = ax * ka * dx;\n"
+    //     "    float i2 = lx * kd * dx * max(0.0, dot(a_normal, L));\n"
+    //     "    float i3 = lx * ks * sx * pow(max(0.0, dot(R, V)), n);\n"
+    //     "    float Ix = min(max(colourTaint*2.0, 0.0), 1.0);\n"
+    //     "    float Iy = min(max(colourTaint/2.0, 0.0), 1.0);\n"
+    //     "    float Iz = min(max(colourTaint, 0.0), 1.0);\n"
+    //     "    shaded_colour = vec3(Ix, Iy, Iz);\n"
+    //     "}\n";
 
     const char fragShader[] =
         "#version 330\n"
@@ -394,8 +431,15 @@ void MainWindow::Render()
     if (pangolin::Pushed(*BtnReadMap))
     {
         slam->readMapFromDisk();
+        mbFlagUpdateMesh = true;
         if (IsPaused())
-            DrawMesh();
+        {
+            if(mbFlagUpdateMesh){
+                DeleteMesh();
+                // mbFlagUpdateMesh=false;
+            }
+            DrawMesh(*BarSwitchSubmap);
+        }
     }
 
     // if(bRecording)
@@ -440,9 +484,10 @@ void MainWindow::Render()
     // -- Display 3D map as constructing ----
     // -- Could jeopardize the real-time performance
     mpViewMesh->Activate(*CameraView);
-    if (!IsPaused())
+    // if (!IsPaused())
+    if(mbFlagUpdateMesh)
         DeleteMesh();
-    DrawMesh();
+    DrawMesh(*BarSwitchSubmap);
     // switch (*BarSwitchMap)
     // {
     //     case 2:
@@ -469,6 +514,7 @@ void MainWindow::Render()
     //         break;
     // }
     // std::cout << "    DONE." << std::endl;
+
     Eigen::Matrix3f K;
     K << 580, 0, 320, 0, 580, 240, 0, 0, 1;
     if (*BoxDisplayCamera)
@@ -1016,13 +1062,44 @@ void MainWindow::Render()
         usleep(10000-span);
 }
 
-void MainWindow::DrawMesh()
+void MainWindow::DrawMesh(int idx)
 {
     auto vpMaps = slam->get_dense_maps();
 
-    // ToDo: some future process to select the map to be visualised
+    //!! Remove vPoses after orthogonal issue in pose loading
+    std::vector<Eigen::Matrix4d> vPoses, vPosesRender;
+    vPoses = slam->readMapPoses();
 
-    for (auto pMap : vpMaps)
+    // get the maps to be rendered
+    std::vector<MapStruct *> vpMapsRender;
+    if(idx == 0){
+        vpMapsRender.push_back(vpMaps[0]);
+
+        //!! Remove vPoses after orthogonal issue in pose loading
+        vPosesRender.push_back(vPoses[0]);
+    } else if (idx == GlobalCfg.mapSize) {
+        vpMapsRender = vpMaps;
+
+        //!! Remove vPoses after orthogonal issue in pose loading
+        vPosesRender = vPoses;
+    } else {
+        vpMapsRender.push_back(vpMaps[0]);
+
+        //!! Remove vPoses after orthogonal issue in pose loading
+        vPosesRender.push_back(vPoses[0]);
+        if(idx < vpMaps.size()){
+            vpMapsRender.push_back(vpMaps[idx]);
+
+            //!! Remove vPoses after orthogonal issue in pose loading
+            vPosesRender.push_back(vPoses[idx]);
+        }
+    }
+
+    //!! Remove vPoses after orthogonal issue in pose loading
+    int count = 0;
+
+    // render the maps
+    for (auto pMap : vpMapsRender)
     {
         if(!pMap->mbHasMesh)
             pMap->GenerateMesh();
@@ -1046,7 +1123,9 @@ void MainWindow::DrawMesh()
             pMap->mbVertexBufferCreated = true;
         }
 
-        Eigen::Matrix4f Tmw = pMap->GetPose().matrix().cast<float>();
+        // Eigen::Matrix4f Tmw = pMap->GetPose().matrix().cast<float>();
+        //!! Remove vPoses after orthogonal issue in pose loading
+        Eigen::Matrix4f Tmw = vPosesRender[count].cast<float>();
 
         ShadingProg.Bind();
         ShadingProg.SetUniform("Tmw", pangolin::OpenGlMatrix(Tmw));
@@ -1067,6 +1146,9 @@ void MainWindow::DrawMesh()
         glDisableVertexAttribArray(1);
         glBindBuffer(GL_ARRAY_BUFFER, 0);
         ShadingProg.Unbind();
+
+        //!! Remove vPoses after orthogonal issue in pose loading
+        count ++;
     }
 }
 void MainWindow::DeleteMesh()
@@ -1084,6 +1166,7 @@ void MainWindow::DeleteMesh()
             pMap->mbVertexBufferCreated = false;
         }
     }
+    mbFlagUpdateMesh=false;
 }
 
 void MainWindow::UpdateMeshWithNormal()

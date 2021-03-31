@@ -42,6 +42,8 @@ public:
     void save_mesh_to_file(const char *str);
     void writeMapToDisk() const;
     void readMapFromDisk();
+    //!! Remove vPoses after orthogonal issue in pose loading
+    std::vector<Eigen::Matrix4d> readMapPoses();
 
     /* Semantic & Reloc disabled for now.
     // pure relocalization

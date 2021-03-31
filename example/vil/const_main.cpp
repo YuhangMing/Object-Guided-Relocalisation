@@ -14,6 +14,7 @@ int main(int argc, char **argv)
 	}
 
     std::string img_path = GlobalCfg.data_folder + "sequence0" + argv[1] + "/Construction";
+    GlobalCfg.map_file += argv[1];  // update the map given current sequence id
     int sequence_id = std::atoi(argv[1]);
 
     std::cout << "Running sequence0" << sequence_id << " with " 
