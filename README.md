@@ -11,9 +11,16 @@ Object-Guided-Relocalisation
 - (Optional) [OpenNI2](https://structure.io/openni)
 
 ## 2. REPO USAGE
-executable data_path folder_name sequence_number display_or_not
+In "main" branch: executable data_path folder_name sequence_number display_or_not
 
 eg.
 ```shell
 ./bin/vil_const ~/SLAMs/datasets/ BOR 5 true
+```
+
+In "dev-submap" branch: executable sequence_number
+
+eg.
+```shell
+./bin/vil_const 5
 ```
