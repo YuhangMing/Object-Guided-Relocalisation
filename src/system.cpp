@@ -105,6 +105,8 @@ System::System(bool bSemantic, bool bLoadDiskMap)
     // odometry->SetDetector(detector);
     }
 
+    std::cout << "Initialised: SLAM system." << std::endl;
+
     // ??? change later
     // // LOAD SEMANTIC MAPS
     // if(bLoadSMap){
@@ -182,7 +184,7 @@ void System::process_images(const cv::Mat depth, const cv::Mat image,
     //     cv::imwrite(name_color, color);
     // }
 
-    std::cout << "Frame #" << frame_id << std::endl;
+    // std::cout << "Frame #" << frame_id << std::endl;
     // In tracking and Mapping, loop through all active submaps
     for(size_t i=0; i<manager->vActiveSubmaps.size(); ++i)
     {
@@ -199,7 +201,7 @@ void System::process_images(const cv::Mat depth, const cv::Mat image,
         /* TRACKING */
         if (!odometry->trackingLost){
             b_reloc_attp = false;
-            std::cout << "- Dense Tracking." <<  std::endl;
+            // std::cout << "- Dense Tracking." <<  std::endl;
             // update pose of current_frame and reference_frame in corresponding DeviceImage
             odometry->trackFrame(current_frame);
             
@@ -259,13 +261,13 @@ void System::process_images(const cv::Mat depth, const cv::Mat image,
             current_image->get_vmap().copyTo(cuVMap);
             // current_image->get_nmap(0).copyTo(cuNMap);
             Sophus::SE3d Tcm = current_frame->pose; // transformation from camera to map
-            std::cout << Tcm.matrix() << std::endl;
+            // std::cout << Tcm.matrix() << std::endl;
             
             // update the map
-            std::cout << "- Map Fusing." << std::endl;
+            // std::cout << "- Map Fusing." << std::endl;
             manager->vActiveSubmaps[i]->Fuse(cuDepth, Tcm);
 
-            std::cout << "- Raytracing." << std::endl;
+            // std::cout << "- Raytracing." << std::endl;
             // cv::Mat test_vmap, test_nmap;
             // cuVMap.download(test_vmap);
             // // cuNMap.download(test_nmap);
@@ -284,33 +286,32 @@ void System::process_images(const cv::Mat depth, const cv::Mat image,
             // /*Semantic & Reloc diasbled for now
             // add new keyframe in the map & calculate cuboids for objects detected
             if(hasNewKeyFrame && bSemantic){
-                // manager->AddKeyFrame(current_keyframe); // DO WE NEED THIS?
+                manager->AddKeyFrame(current_keyframe->pose.matrix().cast<float>()); // DO WE NEED THIS?
                 reference_image->downloadVNM(odometry->vModelFrames[i], false);
-                // // Store vertex map.
-                // // Store vertex map of current KF as point cloud in the file.
-                // // std::cout << "Type of vmap is ";
-                // // std::cout << odometry->vModelFrames[i]->vmap.type() << std::endl;
-                // std::ofstream pcd_file;
-                // std::string pcd_file_name = "point_cloud_bin_" + std::to_string(frame_id) + ".txt";
-                // pcd_file.open(pcd_file_name, std::ios::app);
-                // int channel = odometry->vModelFrames[i]->vmap.channels();
-                // int rows = odometry->vModelFrames[i]->vmap.rows;
-                // int cols = odometry->vModelFrames[i]->vmap.cols;
-                // float* vmap_data = (float*) odometry->vModelFrames[i]->vmap.data;
-                // if(pcd_file.is_open())
-                // {
-                //     for(int vmapi=0; vmapi < rows*cols; ++vmapi){
-                //         pcd_file << vmap_data[vmapi*4] << "," << vmap_data[vmapi*4+1] << "," 
-                //              << vmap_data[vmapi*4+2] << "," << vmap_data[vmapi*4+3] << "\n";
-                //     } 
-                // }
-                // pcd_file.close();
+                /* Store vertex map from current KF.
+                // Store vertex map of current KF as point cloud in the file.
+                // std::cout << "Type of vmap is ";
+                // std::cout << odometry->vModelFrames[i]->vmap.type() << std::endl;
+                std::ofstream pcd_file;
+                std::string pcd_file_name = "point_cloud_bin_" + std::to_string(frame_id) + ".txt";
+                pcd_file.open(pcd_file_name, std::ios::app);
+                int channel = odometry->vModelFrames[i]->vmap.channels();
+                int rows = odometry->vModelFrames[i]->vmap.rows;
+                int cols = odometry->vModelFrames[i]->vmap.cols;
+                float* vmap_data = (float*) odometry->vModelFrames[i]->vmap.data;
+                if(pcd_file.is_open())
+                {
+                    for(int vmapi=0; vmapi < rows*cols; ++vmapi){
+                        pcd_file << vmap_data[vmapi*4] << "," << vmap_data[vmapi*4+1] << "," 
+                             << vmap_data[vmapi*4+2] << "," << vmap_data[vmapi*4+3] << "\n";
+                    } 
+                }
+                pcd_file.close();
+                */
                 // perform semantic analysis on keyframe
                 extract_semantics(odometry->vModelFrames[i], false, 1, 0.002, 5, 7);
                 if(current_keyframe->numDetection > 0){
-                    std::cout << current_keyframe->numDetection 
-                              << " object instances detected." << std::endl;
-                    // manager->active_submaps[i]->update_objects(odometry->vModelFrames[i]);
+                    manager->vObjectMaps[i]->update_objects(odometry->vModelFrames[i]);
                     // // INTEROGATIVE: Do we actually need this step?
                     // manager->active_submaps[i]->color_objects(reference_image);
                     // manager->active_submaps[i]->raycast(reference_image->get_vmap(), reference_image->get_nmap(0), reference_image->get_object_mask(), reference_frame->pose);
@@ -462,7 +463,7 @@ void System::process_images(const cv::Mat depth, const cv::Mat image,
     // }
 
     frame_id += 1;
-    std::cout << "FINISHED current frame.\n" << std::endl;
+    // std::cout << "FINISHED current frame.\n" << std::endl;
 }
 
 
@@ -574,9 +575,17 @@ std::vector<MapStruct *> System::get_dense_maps()
 {
     return manager->getDenseMaps();
 }
+std::vector<Eigen::Matrix<float, 4, 4>> System::getKeyFramePoses() const
+{
+    return manager->GetKFPoses();
+}
 cv::Mat System::get_detected_image()
 {
     return current_keyframe->image;
+}
+std::vector<std::pair<int, std::vector<float>>> System::get_objects(bool bMain) const
+{
+    return manager->GetObjects(bMain);
 }
 
 
@@ -587,11 +596,12 @@ void System::save_mesh_to_file(const char *str)
 }
 void System::writeMapToDisk() const
 {
+    std::cout << "Writing map(s) to the disk..." << std::endl;
     manager->writeMapToDisk();
 }
 void System::readMapFromDisk()
 {
-    std::cout << "Reading map from disk..." << std::endl;
+    std::cout << "Reading map(s) from the disk..." << std::endl;
     manager->readMapFromDisk();
 }
 //!! Remove vPoses after orthogonal issue in pose loading
@@ -986,10 +996,6 @@ cv::Mat System::get_segmented_mask() const
     return mScaledMask*255;
 }
 
-std::vector<Eigen::Matrix<float, 4, 4>> System::getKeyFramePoses() const
-{
-    return manager->GetKFPoses();
-}
 std::vector<Eigen::Matrix<float, 4, 4>> System::getGTposes() const
 {
     return vGTposes;
@@ -1008,10 +1014,7 @@ int System::get_reloc_num_objs() const
         return 0;
     }
 }
-std::vector<std::pair<int, std::vector<float>>> System::get_objects(bool bMain) const
-{
-    return manager->GetObjects(bMain);
-}
+
 std::vector<std::pair<int, std::vector<float>>> System::get_object_cuboids() const
 {
     return manager->GetObjectCuboids();

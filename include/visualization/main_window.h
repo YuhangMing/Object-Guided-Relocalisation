@@ -40,15 +40,16 @@ public:
     bool mbFlagRestart;
     bool mbFlagUpdateMesh;
 
-    float *GetMappedVertexBuffer();
-    float *GetMappedNormalBuffer();
-    unsigned char *GetMappedColourBuffer();
+    // bool bDisplayOtherPoses;
 
+    /* Old mesh drawing functions
     size_t VERTEX_COUNT;
     size_t MAX_VERTEX_COUNT;
 
-    bool bDisplayOtherPoses;
-    bool bRecording;
+    float *GetMappedVertexBuffer();
+    float *GetMappedNormalBuffer();
+    unsigned char *GetMappedColourBuffer();
+    */
 
 private:
     //! Window Title
@@ -57,7 +58,6 @@ private:
     void SetupDisplays();
     void SetupGLFlags();
     void InitTextures();
-    void InitMeshBuffers();
     void InitGlSlPrograms();
     void RegisterKeyCallback();
 
@@ -97,12 +97,13 @@ private:
     // std::shared_ptr<pangolin::Var<int>> BarSwitchMap;
     std::shared_ptr<pangolin::Var<int>> BarSwitchSubmap;
     std::shared_ptr<pangolin::Var<bool>> BoxDisplayCamera;
+    std::shared_ptr<pangolin::Var<bool>> BoxDisplayKeyCameras;
+    std::shared_ptr<pangolin::Var<int>> BarSwitchCuboid;
+    std::shared_ptr<pangolin::Var<bool>> BoxPrimaryCuboid;
     /* Semantic & Reloc diasbled for now
     std::shared_ptr<pangolin::Var<bool>> BoxDisplayDetected;
-    std::shared_ptr<pangolin::Var<bool>> BoxDisplayKeyCameras;
     std::shared_ptr<pangolin::Var<bool>> BoxDisplayRelocTrajectory;
     std::shared_ptr<pangolin::Var<bool>> BoxDisplayKeyPoint;
-    std::shared_ptr<pangolin::Var<int>> BarSwitchCuboid;
     std::shared_ptr<pangolin::Var<bool>> BoxDisplayCuboids;
     std::shared_ptr<pangolin::Var<bool>> BoxDisplayPtCloud;
     std::shared_ptr<pangolin::Var<int>> BarSwitchCuboidsReloc;
@@ -112,27 +113,11 @@ private:
     std::shared_ptr<pangolin::Var<int>> BarSwitchObject;
     // std::shared_ptr<pangolin::Var<bool>> BoxDisplayCuboidsAVG;
     std::shared_ptr<pangolin::Var<bool>> BoxDisplayMainCuboids;
-    std::shared_ptr<pangolin::Var<bool>> BoxDisplayAllCuboids;
     */
 
     //! New Draw Mesh Function
     void DrawMesh(int idx);
     void DeleteMesh();
-
-    //! Acquire Mehs Functions
-    void UpdateMeshWithNormal();
-    void UpdateMeshWithColour();
-
-    //! Draw Mesh Functions
-    void DrawMeshShaded();
-    void DrawMeshColoured();
-    void DrawMeshNormalMapped();
-
-    //! Mesh Vertices
-    // following variables store teh vertex, normal and color info from the map
-    pangolin::GlBufferCudaPtr BufferVertex;
-    pangolin::GlBufferCudaPtr BufferNormal;
-    pangolin::GlBufferCudaPtr BufferColour;
 
     //! Draw Cuboid Function
     bool bUseGT = false;
@@ -142,32 +127,18 @@ private:
     // TEST //
     void DrawTestCuboids(int label);
 
-    //! Registered CUDA Ptrs
-    std::shared_ptr<pangolin::CudaScopedMappedPtr> MappedVertex;
-    std::shared_ptr<pangolin::CudaScopedMappedPtr> MappedNormal;
-    std::shared_ptr<pangolin::CudaScopedMappedPtr> MappedColour;
-
     //! GL Shading program
     pangolin::GlSlProgram ShadingProg, ShadingColorProg;
 
-    //! Vertex Array Objects
-    //! Cannot find a replacement in Pangolin
-    GLuint VAOShade, VAOColour;
-    // stores vertex buffer
-
     //! Current Camera Pose
     Eigen::Matrix4f CameraPose;
-
-    //! Key Frame Poses
-    std::vector<Eigen::Matrix4f> ListOfKeyCameras;
-
+    
     //! system ref
     fusion::System *slam;
 
-    // //! key point array
-    // float *keypoints;
-    // size_t sizeKeyPoint;
-    // size_t maxSizeKeyPoint;
+    // //! Key Frame Poses
+    // std::vector<Eigen::Matrix4f> ListOfKeyCameras;
+
 
     //! color palette
     /*
@@ -188,6 +159,40 @@ private:
         {0.,        0.,        1.},
         {0.,        1.,        1.}
     };
+
+    // //! key point array
+    // float *keypoints;
+    // size_t sizeKeyPoint;
+    // size_t maxSizeKeyPoint;
+
+    /* Old mesh drawing functions
+    void InitMeshBuffers();
+
+    //! Acquire Mehs Functions
+    void UpdateMeshWithNormal();
+    void UpdateMeshWithColour();
+    
+    //! Draw Mesh Functions
+    void DrawMeshShaded();
+    void DrawMeshColoured();
+    void DrawMeshNormalMapped();
+    
+    //! Mesh Vertices
+    // following variables store teh vertex, normal and color info from the map
+    pangolin::GlBufferCudaPtr BufferVertex;
+    pangolin::GlBufferCudaPtr BufferNormal;
+    pangolin::GlBufferCudaPtr BufferColour;
+
+    //! Registered CUDA Ptrs
+    std::shared_ptr<pangolin::CudaScopedMappedPtr> MappedVertex;
+    std::shared_ptr<pangolin::CudaScopedMappedPtr> MappedNormal;
+    std::shared_ptr<pangolin::CudaScopedMappedPtr> MappedColour;
+
+    //! Vertex Array Objects
+    //! Cannot find a replacement in Pangolin
+    GLuint VAOShade, VAOColour;
+    // stores vertex buffer
+    */
 
 };
 

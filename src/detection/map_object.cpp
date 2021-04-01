@@ -143,7 +143,7 @@ float Object3d::bbox3d_overlap(Eigen::Vector3d &cent, std::vector<float> &dim, f
 
     // if criteria met, update that cuboid, else store as new cuboid
     if(max_IoU < 0.3){
-        std::cout << "\nMax IoU = " << max_IoU << "!!!!!!!!!! Overlap volume too small, add new cuboid." << std::endl;
+        std::cout << "!!!! Max IoU = " << max_IoU << ". Overlap volume too small, add new cuboid." << std::endl;
         cuboid_idx = -1;
     }
 
@@ -514,7 +514,7 @@ Object3d::Object3d(std::string file_name, int& start_line)
 void Object3d::writeToFile(std::string file_name)
 {
     std::ofstream semanticfile;
-    semanticfile.open(file_name+"-semantic.txt", std::ios::app);
+    semanticfile.open(file_name, std::ios::app);
     if (semanticfile.is_open())
     {
         semanticfile << label << "," << observation_count << "\n";
@@ -535,7 +535,7 @@ void Object3d::readFromFile(std::string file_name, int& start_line)
 {
 
     int num_of_cuboids = 0;
-    std::ifstream semanticfile(file_name+"-semantic.txt", std::ios::in);
+    std::ifstream semanticfile(file_name, std::ios::in);
     if (semanticfile.is_open())
     {
         std::string line;

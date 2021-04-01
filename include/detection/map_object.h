@@ -3,8 +3,8 @@
 
 #include <Eigen/Core>
 #include <opencv2/opencv.hpp>
-#include "map_cuboid.h"
-#include "map_quadric.h"
+#include "detection/map_cuboid.h"
+// #include "detection/map_quadric.h"
 
 namespace fusion
 {

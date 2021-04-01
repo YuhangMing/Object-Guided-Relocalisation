@@ -24,10 +24,10 @@ typedef Sophus::SE3d PoseType;
 // Debug
 struct Config
 {
+    bool bEnableViewer = true;
     bool bSubmapping = false;
     bool bSemantic = true;
     bool bRecord = false;
-    bool bEnableViewer = true;
     bool bLoadDiskMap = false;
     
     std::string data_folder = "/home/yohann/SLAMs/datasets/BOR/";

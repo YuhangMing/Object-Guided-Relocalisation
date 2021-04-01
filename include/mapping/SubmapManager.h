@@ -10,6 +10,7 @@
 #include "mapping/VoxelMap.h"
 #include "mapping/RayTraceEngine.h"
 #include "mapping/MeshEngine.h"
+#include "mapping/ObjectMap.h"
 
 namespace fusion
 {
@@ -24,8 +25,13 @@ public:
 	~SubmapManager();
 
 	void Create(int submapIdx, bool bTrack=false, bool bRender=false);
+	void AddKeyFrame(Eigen::Matrix4f kfPose);
 	
+
 	std::vector<MapStruct *> getDenseMaps();
+	std::vector<Eigen::Matrix<float, 4, 4>> GetKFPoses();
+	std::vector<std::pair<int, std::vector<float>>> GetObjects(bool bMain);
+	
 	void writeMapToDisk();
 	void readMapFromDisk();
 	void writePosesToText(std::string file_name, std::vector<Eigen::Matrix4d> vPoses);
@@ -37,6 +43,7 @@ public:
 	MeshEngine *pMesher;
 	RayTraceEngine *pRayTracer;
 	std::vector< MapStruct * > vActiveSubmaps;
+	std::vector< ObjectMap * > vObjectMaps;
 
 	void Create(int submapIdx, RgbdImagePtr ref_img, bool bTrack=false, bool bRender=true);
 	void ResetSubmaps();
@@ -47,10 +54,7 @@ public:
 	void CheckTrackAndRender(int cur_frame_id, int max_perct_idx);
 
 	void estimate_world_plane(RgbdFramePtr frame);
-	void AddKeyFrame(RgbdFramePtr currKF);
-	std::vector<Eigen::Matrix<float, 4, 4>> GetKFPoses();
 	void GetPoints(float *pt3d, size_t &count, size_t max_size);
-	std::vector<std::pair<int, std::vector<float>>> GetObjects(bool bMain);
 	std::vector<std::pair<int, std::vector<float>>> GetObjectCuboids();
 	std::vector<float> GetObjectCentroidAxes(int idx_obj);
 	int GetObjectPts(float *points, size_t &count, int idx_obj);

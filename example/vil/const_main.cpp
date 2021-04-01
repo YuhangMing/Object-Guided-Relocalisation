@@ -30,7 +30,9 @@ int main(int argc, char **argv)
     if(GlobalCfg.bEnableViewer){
         MainWindow window("Object-Guided-Reloc", 1920, 920);
         window.SetSystem(&slam);
+        std::cout << "Initialised: Visualisation window." << std::endl;
 
+        std::cout << "\n------- Entering the main loop -------" << std::endl;
         while (!pangolin::ShouldQuit())
         {
             if (!window.IsPaused() && load_next_image_vil_sequence(depth, image, img_path))
@@ -42,10 +44,10 @@ int main(int argc, char **argv)
                     //     << ( std::clock() - start ) / (double) CLOCKS_PER_SEC 
                     //     << " seconds" << std::endl;
                 
-                if(GlobalCfg.bRecord)
-                    window.SetRGBSource(image);
-                else
+                if(!GlobalCfg.bRecord && GlobalCfg.bSemantic)
                     window.SetRGBSource(slam.get_detected_image());
+                else
+                    window.SetRGBSource(image);
                 window.SetDepthSource(depth);   // raw depth
                 // window.SetDetectedSource(slam.get_detected_image());
                 // window.SetRenderScene(slam.get_rendered_scene());
@@ -99,5 +101,4 @@ bool load_next_image_vil_sequence(cv::Mat &depth, cv::Mat &color, std::string im
 
     image_counter++;
 	return true;
-
 }

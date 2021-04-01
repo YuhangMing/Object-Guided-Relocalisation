@@ -38,6 +38,8 @@ public:
     Eigen::Matrix4f get_camera_pose() const;
     std::vector<MapStruct *> get_dense_maps();
     cv::Mat get_detected_image();
+    std::vector<Eigen::Matrix<float, 4, 4>> getKeyFramePoses() const;
+    std::vector<std::pair<int, std::vector<float>>> get_objects(bool bMain) const;
     
     // save and read maps
     void save_mesh_to_file(const char *str);
@@ -74,7 +76,6 @@ public:
     // void recordSequence(std::string dir) const;
     
     /* Semantic & Reloc diasbled for now
-    std::vector<Eigen::Matrix<float, 4, 4>> getKeyFramePoses() const;
     std::vector<Eigen::Matrix<float, 4, 4>> getGTposes() const;
     std::vector<Eigen::Matrix<float, 4, 4>> vRelocPoses;
     std::vector<Eigen::Matrix<float, 4, 4>> getRelocPoses() const;
@@ -83,7 +84,6 @@ public:
     
     int get_num_objs() const;
     int get_reloc_num_objs() const;
-    std::vector<std::pair<int, std::vector<float>>> get_objects(bool bMain) const;
     std::vector<std::pair<int, std::vector<float>>> get_object_cuboids() const;
     std::vector<std::pair<int, std::vector<float>>> get_reloc_cuboids(int usePose) const;
     std::vector<float> get_obj_centroid_axes(int idx_obj);

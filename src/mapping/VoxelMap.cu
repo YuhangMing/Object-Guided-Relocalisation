@@ -1063,9 +1063,9 @@ void MapStruct::writeToDisk(std::string file_name, bool binary)
         file.flush();
     
         file.close();
-        std::cout << "SUCCESS: map data wrote to disk." << std::endl;
+        std::cout << " - SUCCESS: map data wrote to disk." << std::endl;
     } else {
-        std::cout << "FAILED: cannot open map data file." << std::endl;
+        std::cout << " - FAILED: cannot open map data file." << std::endl;
     }
 
     std::ofstream file_param;
@@ -1080,9 +1080,9 @@ void MapStruct::writeToDisk(std::string file_name, bool binary)
         file_param.flush();
 
         file_param.close();
-        std::cout << "SUCCESS: map size wrote to disk." << std::endl;
+        std::cout << " - SUCCESS: map size wrote to disk." << std::endl;
     } else {
-        std::cout << "FAILED: map size file cannot open." << std::endl;
+        std::cout << " - FAILED: map size file cannot open." << std::endl;
     }
 
     // release cpu data structures
@@ -1111,11 +1111,11 @@ void MapStruct::readFromDisk(std::string file_name, bool binary)
         file_param.read((char *)&truncationDist, sizeof(truncationDist));
         
         file_param.close();
-        std::cout << "SUCCESS: map size read from disk." << std::endl;
+        std::cout << " - SUCCESS: map size read from disk." << std::endl;
     }
     else
     {
-        std::cout << "FAILED: cannot open the map size file." << std::endl;
+        std::cout << " - FAILED: cannot open the map size file." << std::endl;
         return;
     }
     // std::cout << hashTableSize << ", "
@@ -1124,7 +1124,7 @@ void MapStruct::readFromDisk(std::string file_name, bool binary)
     //           << voxelSize << ", "
     //           << truncationDist << std::endl;
     if(Empty()){
-        std::cout << "FAILED: cannot read map size from disk." << std::endl;
+        std::cout << " - FAILED: cannot read map size from disk." << std::endl;
         return;
     }
 
@@ -1157,9 +1157,9 @@ void MapStruct::readFromDisk(std::string file_name, bool binary)
         file.read((char *)mpLinkedListHeadHib, sizeof(int));
 
         file.close();
-        std::cout << "SUCCESS: map data read from disk." << std::endl;
+        std::cout << " - SUCCESS: map data read from disk." << std::endl;
     } else {
-        std::cout << "FAILED: cannot open the map data file." << std::endl;
+        std::cout << " - FAILED: cannot open the map data file." << std::endl;
         return;
     }
     // std::cout << *mpLinkedListHeadHib << ", "

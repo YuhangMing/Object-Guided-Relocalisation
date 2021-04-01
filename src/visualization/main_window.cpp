@@ -23,7 +23,6 @@ MainWindow::MainWindow(const char *name, size_t width, size_t height, bool bDisp
     // nIndicator = 0;
 
     // bDisplayOtherPoses = bDisplay;
-    // bRecording = false;
 }
 
 MainWindow::~MainWindow()
@@ -58,24 +57,24 @@ void MainWindow::SetupDisplays()
     BtnSaveMap = std::make_shared<pangolin::Var<bool>>("Menu.Save Map", false, false);
     BtnReadMap = std::make_shared<pangolin::Var<bool>>("Menu.Read Map", false, false);
     BoxPaused = std::make_shared<pangolin::Var<bool>>("Menu.PAUSE", true, true);
-    BoxDisplayImage = std::make_shared<pangolin::Var<bool>>("Menu.KeyFrame Image", true, true);
-    BoxDisplayScene = std::make_shared<pangolin::Var<bool>>("Menu.Rendered Scene", true, true);
+    BoxDisplayImage = std::make_shared<pangolin::Var<bool>>("Menu.Color Image", true, true);
+    BoxDisplayScene = std::make_shared<pangolin::Var<bool>>("Menu.Depth Image", true, true);
     // BoxDisplayDepth = std::make_shared<pangolin::Var<bool>>("Menu.Live Depth", true, true);
     // BoxDisplayDetected = std::make_shared<pangolin::Var<bool>>("Menu.Detected Result", true, true);
-    
+    BoxDisplayCamera = std::make_shared<pangolin::Var<bool>>("Menu.Current Camera", true, true);
+    BoxDisplayKeyCameras = std::make_shared<pangolin::Var<bool>>("Menu.KeyFrames", false, true);
+
+    BoxPrimaryCuboid = std::make_shared<pangolin::Var<bool>>("Menu.Primary Cuboid", true, true);
+    BarSwitchCuboid = std::make_shared<pangolin::Var<int>>("Menu.Display Cuboid", 7, 0, 7);
     // display name, current val, min, max;
     // BarSwitchMap = std::make_shared<pangolin::Var<int>>("Menu.Display Map", 1, 0, 2);
     BarSwitchSubmap = std::make_shared<pangolin::Var<int>>("Menu.Submaps", 0, 0, GlobalCfg.mapSize);
-    BoxDisplayCamera = std::make_shared<pangolin::Var<bool>>("Menu.Current Camera", true, true);
     
     /* Semantic disabled for now
-    BoxDisplayKeyCameras = std::make_shared<pangolin::Var<bool>>("Menu.Stored KeyFrames", false, true);
     BoxDisplayRelocTrajectory = std::make_shared<pangolin::Var<bool>>("Menu.Reloc Frames", false, true);
-    
-    BoxDisplayKeyPoint = std::make_shared<pangolin::Var<bool>>("Menu.Stored KeyPoint", false, true);
-    BarSwitchCuboid = std::make_shared<pangolin::Var<int>>("Menu.Display Cuboid", 7, 0, 7);
     BoxDisplayCuboids = std::make_shared<pangolin::Var<bool>>("Menu.Object Main Cuboids", true, true);
-    BoxDisplayAllCuboids = std::make_shared<pangolin::Var<bool>>("Menu.Object All Cuboids", false, true);
+    BoxDisplayKeyPoint = std::make_shared<pangolin::Var<bool>>("Menu.Stored KeyPoint", false, true);
+    
     BoxDisplayPtCloud = std::make_shared<pangolin::Var<bool>>("Menu.Object PtCloud", false, true);
     BarSwitchCuboidsReloc = std::make_shared<pangolin::Var<int>>("Menu.Frame Cuboids", 0, 0, 2);
     // BoxDisplayCuboidsReloc = std::make_shared<pangolin::Var<bool>>("Menu.Frame Cuboids", false, true);
@@ -133,113 +132,13 @@ void MainWindow::RegisterKeyCallback()
 
 void MainWindow::InitTextures()
 {
-    TextureRGB.Reinitialise(
-        640, 480,
-        GL_RGB,
-        true,
-        0,
-        GL_RGB,
-        GL_UNSIGNED_BYTE,
-        NULL);
+    TextureRGB.Reinitialise(640, 480, GL_RGB, true, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+    TextureDepth.Reinitialise(640, 480, GL_LUMINANCE, true, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, NULL);
 
-    TextureDepth.Reinitialise(
-        640, 480,
-        GL_LUMINANCE,
-        true,
-        0,
-        GL_LUMINANCE,
-        GL_UNSIGNED_BYTE,
-        NULL);
-
-    // TextureDetected.Reinitialise(
-    //     640, 480,
-    //     GL_RGB,
-    //     true,
-    //     0,
-    //     GL_RGB,
-    //     GL_UNSIGNED_BYTE,
-    //     NULL);
-
-    // TextureScene.Reinitialise(
-    //     640, 480,
-    //     GL_RGBA,
-    //     true,
-    //     0,
-    //     GL_RGBA,
-    //     GL_UNSIGNED_BYTE,
-    //     NULL);
-
-    // TextureNOCSMap.Reinitialise(
-    //     640, 480,
-    //     GL_RGB,
-    //     true,
-    //     0,
-    //     GL_RGB,
-    //     GL_UNSIGNED_BYTE,
-    //     NULL);
-
-    // TextureMask.Reinitialise(
-    //     640, 480,
-    //     GL_LUMINANCE,
-    //     true,
-    //     0,
-    //     GL_LUMINANCE,
-    //     GL_UNSIGNED_BYTE,
-    //     NULL);
-}
-
-void MainWindow::InitMeshBuffers()
-{
-    // auto size = sizeof(float) * 3 * MAX_VERTEX_COUNT;
-
-    // BufferVertex.Reinitialise(
-    //     pangolin::GlArrayBuffer,
-    //     size,
-    //     cudaGLMapFlagsWriteDiscard,
-    //     GL_STATIC_DRAW);
-
-    // BufferNormal.Reinitialise(
-    //     pangolin::GlArrayBuffer,
-    //     size,
-    //     cudaGLMapFlagsWriteDiscard,
-    //     GL_STATIC_DRAW);
-
-    // BufferColour.Reinitialise(
-    //     pangolin::GlArrayBuffer,
-    //     size,
-    //     cudaGLMapFlagsWriteDiscard,
-    //     GL_STATIC_DRAW);
-
-    // MappedVertex = std::make_shared<pangolin::CudaScopedMappedPtr>(BufferVertex);
-    // MappedNormal = std::make_shared<pangolin::CudaScopedMappedPtr>(BufferNormal);
-    // MappedColour = std::make_shared<pangolin::CudaScopedMappedPtr>(BufferColour);
-
-    // glGenVertexArrays(1, &VAOShade);
-    // glBindVertexArray(VAOShade);
-
-    // BufferVertex.Bind();
-    // glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-    // glEnableVertexAttribArray(0);
-
-    // BufferNormal.Bind();
-    // glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
-    // glEnableVertexAttribArray(1);
-
-    // glGenVertexArrays(1, &VAOColour);
-    // glBindVertexArray(VAOColour);
-
-    // BufferVertex.Bind();
-    // glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-    // glEnableVertexAttribArray(0);
-
-    // BufferColour.Bind();
-    // glVertexAttribPointer(2, 3, GL_UNSIGNED_BYTE, GL_TRUE, 0, 0);
-    // glEnableVertexAttribArray(2);
-
-    // // previous buffers are unbinded automatically when binding next buffer.
-    // // so only last one need to call Unbind explicitly
-    // BufferColour.Unbind();
-    // glBindVertexArray(0);
+    // TextureDetected.Reinitialise(640, 480, GL_RGB, true, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+    // TextureScene.Reinitialise(640, 480, GL_RGBA, true, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+    // TextureNOCSMap.Reinitialise(640, 480, GL_RGB, true, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+    // TextureMask.Reinitialise(640, 480, GL_LUMINANCE, true, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, NULL);
 }
 
 void MainWindow::InitGlSlPrograms()
@@ -406,8 +305,8 @@ void MainWindow::Render()
     if (pangolin::Pushed(*BtnReset))
     {
         slam->restart();
-        if (IsPaused())
-            UpdateMeshWithNormal();
+        // if (IsPaused())
+        //     UpdateMeshWithNormal();
     }
 
     if (pangolin::Pushed(*BtnSetLost))
@@ -434,34 +333,16 @@ void MainWindow::Render()
         }
     }
 
-    // if(GlobalCfg.bRecord)
-    // {
-        if (*BoxDisplayScene)
-        {
-            mpViewRelocView->Activate();
-            TextureDepth.RenderToViewportFlipY();
-        }
-        if (*BoxDisplayImage)
-        {
-            mpViewRGB->Activate();
-            TextureRGB.RenderToViewportFlipY();
-        }
-    // } 
-    // else 
-    // {
-    //     if (*BoxDisplayScene)
-    //     {
-    //         mpViewRelocView->Activate();
-    //         TextureDepth.RenderToViewportFlipY();
-    //         // TextureScene.RenderToViewportFlipY();
-    //     }
-    //     if (*BoxDisplayImage)
-    //     {
-    //         mpViewRGB->Activate();
-    //         TextureDetected.RenderToViewportFlipY();
-    //     }
-    // }
-    
+    if (*BoxDisplayImage)
+    {
+        mpViewRGB->Activate();
+        TextureRGB.RenderToViewportFlipY();
+    }
+    if (*BoxDisplayScene)
+    {
+        mpViewRelocView->Activate();
+        TextureDepth.RenderToViewportFlipY();
+    }
     // if (*BoxDisplayDepth)
     // {
     //     mpViewDepth->Activate();
@@ -475,7 +356,7 @@ void MainWindow::Render()
     // }
 
     // -- Display 3D map as constructing ----
-    // -- Could jeopardize the real-time performance
+    // -- Jeopardize the real-time performance
     mpViewMesh->Activate(*CameraView);
     // if (!IsPaused())
     if(mbFlagUpdateMesh)
@@ -547,7 +428,8 @@ void MainWindow::Render()
         */
     }
 
-    /* Semantic and Reloc Disabled for now
+    if(GlobalCfg.bSemantic)
+    {
     if (*BoxDisplayKeyCameras)
     {
         auto keyframe_poses = slam->getKeyFramePoses();
@@ -560,6 +442,20 @@ void MainWindow::Render()
         }
         pangolin::glDrawVertices(camera_centers, GL_LINE_STRIP);
     }
+
+    if (*BarSwitchCuboid > 0)
+    {
+        std::vector<std::pair<int, std::vector<float>>> label_dim_pairs = slam->get_objects(*BoxPrimaryCuboid);
+        for(size_t i=0; i<label_dim_pairs.size(); ++i)
+        {
+            if(*BarSwitchCuboid<7 && label_dim_pairs[i].first != *BarSwitchCuboid)
+                continue;
+            DrawCuboids(label_dim_pairs, i, false);
+        }
+    }
+    }
+
+    /* Semantic and Reloc Disabled for now
     if (*BoxDisplayRelocTrajectory)
     {
         // if(reloc_poses.size() > 0)
@@ -667,70 +563,6 @@ void MainWindow::Render()
             }
         }
 
-    }
-    if (*BoxDisplayCuboids)
-    {
-        // display cuboids
-        // std::vector<std::pair<int, std::vector<float>>> label_dim_pairs = slam->get_object_cuboids(); 
-        std::vector<std::pair<int, std::vector<float>>> label_dim_pairs = slam->get_objects(true);
-        switch (*BarSwitchCuboid){
-            case 1:
-                for(size_t i=0; i<label_dim_pairs.size(); ++i)
-                {
-                    if(label_dim_pairs[i].first != 1)
-                        continue;
-                    DrawCuboids(label_dim_pairs, i, false);
-                }
-                break;
-            case 2:
-                for(size_t i=0; i<label_dim_pairs.size(); ++i)
-                {
-                    if(label_dim_pairs[i].first != 2)
-                        continue;
-                    DrawCuboids(label_dim_pairs, i, false);
-                }
-                break;
-            case 3:
-                for(size_t i=0; i<label_dim_pairs.size(); ++i)
-                {
-                    if(label_dim_pairs[i].first != 3)
-                        continue;
-                    DrawCuboids(label_dim_pairs, i, false);
-                }
-                break;
-            case 4:
-                for(size_t i=0; i<label_dim_pairs.size(); ++i)
-                {
-                    if(label_dim_pairs[i].first != 4)
-                        continue;
-                    DrawCuboids(label_dim_pairs, i, false);
-                }
-                break;
-            case 5:
-                for(size_t i=0; i<label_dim_pairs.size(); ++i)
-                {
-                    if(label_dim_pairs[i].first != 5)
-                        continue;
-                    DrawCuboids(label_dim_pairs, i, false);
-                }
-                break;
-            case 6:
-                for(size_t i=0; i<label_dim_pairs.size(); ++i)
-                {
-                    if(label_dim_pairs[i].first != 6)
-                        continue;
-                    DrawCuboids(label_dim_pairs, i, false);
-                }
-                break;
-            case 7:
-                for(size_t i=0; i<label_dim_pairs.size(); ++i)
-                {
-                    DrawCuboids(label_dim_pairs, i, false);
-                }
-                break;
-            default:
-                break;
-        }
     }
 
     if (IsPaused())
@@ -1162,68 +994,6 @@ void MainWindow::DeleteMesh()
     mbFlagUpdateMesh=false;
 }
 
-void MainWindow::UpdateMeshWithNormal()
-{
-    // // Main
-    // auto *vertex = GetMappedVertexBuffer();
-    // auto *normal = GetMappedNormalBuffer();
-    // VERTEX_COUNT = slam->fetch_mesh_with_normal(vertex, normal);
-}
-void MainWindow::UpdateMeshWithColour()
-{
-    // auto *vertex = GetMappedVertexBuffer();
-    // auto *colour = GetMappedColourBuffer();
-    // VERTEX_COUNT = slam->fetch_mesh_with_colour(vertex, colour);
-}
-
-void MainWindow::DrawMeshShaded()
-{
-    // if (VERTEX_COUNT == 0)
-    //     return;
-
-    // ShadingProg.Bind();
-    // glBindVertexArray(VAOShade);
-
-    // ShadingProg.SetUniform("mvp_matrix", CameraView->GetProjectionModelViewMatrix());
-
-    // glDrawArrays(GL_TRIANGLES, 0, VERTEX_COUNT * 3);
-
-    // glBindVertexArray(0);
-    // ShadingProg.Unbind();
-}
-void MainWindow::DrawMeshColoured()
-{
-    // if (VERTEX_COUNT == 0)
-    //     return;
-
-    // ShadingColorProg.Bind();
-    // glBindVertexArray(VAOColour);
-
-    // ShadingColorProg.SetUniform("mvp_matrix", CameraView->GetProjectionModelViewMatrix());
-
-    // glDrawArrays(GL_TRIANGLES, 0, VERTEX_COUNT * 3);
-
-    // glBindVertexArray(0);
-    // ShadingColorProg.Unbind();
-}
-void MainWindow::DrawMeshNormalMapped()
-{
-}
-
-float *MainWindow::GetMappedVertexBuffer()
-{
-    // return (float *)**MappedVertex;
-}
-float *MainWindow::GetMappedNormalBuffer()
-{
-    // return (float *)**MappedNormal;
-}
-unsigned char *MainWindow::GetMappedColourBuffer()
-{
-    // return (unsigned char *)**MappedColour;
-}
-
-/* Semantic & Reloc disabled for now.
 void MainWindow::DrawCuboids(std::vector<std::pair<int, std::vector<float>>> label_dim_pairs,
                              int i, bool bRel, int usePose)
 {
@@ -1305,6 +1075,137 @@ void MainWindow::DrawCuboids(std::vector<std::pair<int, std::vector<float>>> lab
     glColor4f(1.f, 1.f, 1.f, 1.f);
 }
 
+void MainWindow::SetCurrentCamera(Eigen::Matrix4f T)
+{
+    CameraPose = T;
+    // pangolin::OpenGlMatrix ViewMat(CameraPose.inverse().eval());
+    // CameraView->SetModelViewMatrix(ViewMat);
+}
+
+void MainWindow::SetSystem(fusion::System *sys)
+{
+    slam = sys;
+}
+
+
+/* Old mesh drawing functions
+void MainWindow::InitMeshBuffers()
+{
+    auto size = sizeof(float) * 3 * MAX_VERTEX_COUNT;
+
+    BufferVertex.Reinitialise(
+        pangolin::GlArrayBuffer,
+        size,
+        cudaGLMapFlagsWriteDiscard,
+        GL_STATIC_DRAW);
+
+    BufferNormal.Reinitialise(
+        pangolin::GlArrayBuffer,
+        size,
+        cudaGLMapFlagsWriteDiscard,
+        GL_STATIC_DRAW);
+
+    BufferColour.Reinitialise(
+        pangolin::GlArrayBuffer,
+        size,
+        cudaGLMapFlagsWriteDiscard,
+        GL_STATIC_DRAW);
+
+    MappedVertex = std::make_shared<pangolin::CudaScopedMappedPtr>(BufferVertex);
+    MappedNormal = std::make_shared<pangolin::CudaScopedMappedPtr>(BufferNormal);
+    MappedColour = std::make_shared<pangolin::CudaScopedMappedPtr>(BufferColour);
+
+    glGenVertexArrays(1, &VAOShade);
+    glBindVertexArray(VAOShade);
+
+    BufferVertex.Bind();
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+    glEnableVertexAttribArray(0);
+
+    BufferNormal.Bind();
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
+    glEnableVertexAttribArray(1);
+
+    glGenVertexArrays(1, &VAOColour);
+    glBindVertexArray(VAOColour);
+
+    BufferVertex.Bind();
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+    glEnableVertexAttribArray(0);
+
+    BufferColour.Bind();
+    glVertexAttribPointer(2, 3, GL_UNSIGNED_BYTE, GL_TRUE, 0, 0);
+    glEnableVertexAttribArray(2);
+
+    // previous buffers are unbinded automatically when binding next buffer.
+    // so only last one need to call Unbind explicitly
+    BufferColour.Unbind();
+    glBindVertexArray(0);
+}
+
+void MainWindow::UpdateMeshWithNormal()
+{
+    // // Main
+    // auto *vertex = GetMappedVertexBuffer();
+    // auto *normal = GetMappedNormalBuffer();
+    // VERTEX_COUNT = slam->fetch_mesh_with_normal(vertex, normal);
+}
+void MainWindow::UpdateMeshWithColour()
+{
+    // auto *vertex = GetMappedVertexBuffer();
+    // auto *colour = GetMappedColourBuffer();
+    // VERTEX_COUNT = slam->fetch_mesh_with_colour(vertex, colour);
+}
+
+void MainWindow::DrawMeshShaded()
+{
+    // if (VERTEX_COUNT == 0)
+    //     return;
+
+    // ShadingProg.Bind();
+    // glBindVertexArray(VAOShade);
+
+    // ShadingProg.SetUniform("mvp_matrix", CameraView->GetProjectionModelViewMatrix());
+
+    // glDrawArrays(GL_TRIANGLES, 0, VERTEX_COUNT * 3);
+
+    // glBindVertexArray(0);
+    // ShadingProg.Unbind();
+}
+void MainWindow::DrawMeshColoured()
+{
+    // if (VERTEX_COUNT == 0)
+    //     return;
+
+    // ShadingColorProg.Bind();
+    // glBindVertexArray(VAOColour);
+
+    // ShadingColorProg.SetUniform("mvp_matrix", CameraView->GetProjectionModelViewMatrix());
+
+    // glDrawArrays(GL_TRIANGLES, 0, VERTEX_COUNT * 3);
+
+    // glBindVertexArray(0);
+    // ShadingColorProg.Unbind();
+}
+void MainWindow::DrawMeshNormalMapped()
+{
+}
+
+float *MainWindow::GetMappedVertexBuffer()
+{
+    // return (float *)**MappedVertex;
+}
+float *MainWindow::GetMappedNormalBuffer()
+{
+    // return (float *)**MappedNormal;
+}
+unsigned char *MainWindow::GetMappedColourBuffer()
+{
+    // return (unsigned char *)**MappedColour;
+}
+*/
+
+/* Semantic & Reloc disabled for now.
 void MainWindow::DrawPtClouds(int num_objs, int idx, bool bRel)
 {
     for(size_t i=0; i<num_objs; ++i){
@@ -1335,16 +1236,4 @@ void MainWindow::DrawPtClouds(int num_objs, int idx, bool bRel)
     }
 }
 */
-
-void MainWindow::SetCurrentCamera(Eigen::Matrix4f T)
-{
-    CameraPose = T;
-    // pangolin::OpenGlMatrix ViewMat(CameraPose.inverse().eval());
-    // CameraView->SetModelViewMatrix(ViewMat);
-}
-
-void MainWindow::SetSystem(fusion::System *sys)
-{
-    slam = sys;
-}
 

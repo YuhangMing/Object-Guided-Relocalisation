@@ -20,6 +20,10 @@ SubmapManager::~SubmapManager()
 	{
 		delete vActiveSubmaps[i];
 	}
+	for(size_t i=0; i<vObjectMaps.size(); ++i)
+	{
+		delete vObjectMaps[i];
+	}
 }
 
 void SubmapManager::Create(int submapIdx, bool bTrack, bool bRender)
@@ -41,6 +45,7 @@ void SubmapManager::Create(int submapIdx, bool bTrack, bool bRender)
 	pDenseMap->SetPose(Sophus::SE3d());
 
 	vActiveSubmaps.push_back(pDenseMap);
+	std::cout << " - Dense map created." << std::endl;
 
 	// bHasNewSM = false;
 	renderIdx = submapIdx;
@@ -48,15 +53,123 @@ void SubmapManager::Create(int submapIdx, bool bTrack, bool bRender)
 
 	//!! Remove vPoses after orthogonal issue in pose loading
 	vSubmapPoses.push_back(Sophus::SE3d().matrix());
+
+	// Semantics
+	if(GlobalCfg.bSemantic)
+	{
+		auto pObjMap = new ObjectMap(submapIdx);
+		vObjectMaps.push_back(pObjMap);
+		std::cout << " - Object map created." << std::endl;
+	}
 }
+
+void SubmapManager::AddKeyFrame(Eigen::Matrix4f kfPose){
+	// store kf pose in object map
+    vObjectMaps[renderIdx]->vKFs.push_back(kfPose);
+}
+
 
 std::vector<MapStruct *> SubmapManager::getDenseMaps()
 {
 	return vActiveSubmaps;
 }
 
+std::vector<Eigen::Matrix<float, 4, 4>> SubmapManager::GetKFPoses(){
+	return vObjectMaps[renderIdx]->vKFs;
+	
+	// std::vector<Eigen::Matrix<float, 4, 4>> poses;
+	// Eigen::Matrix4f Tw2rfinv = active_submaps[renderIdx]->poseGlobal.cast<float>().matrix().inverse();
+    // // actives
+    // for (size_t i=0; i<active_submaps.size(); ++i)
+    // {
+    // 	Eigen::Matrix4f Twm = active_submaps[i]->poseGlobal.cast<float>().matrix();
+	// 	if(active_submaps[i]->vKFposes.size() > 0){
+	// 		for(size_t j=0; j<active_submaps[i]->vKFposes.size(); ++j)
+	// 		{
+	// 			Eigen::Matrix4f Tmf = active_submaps[i]->vKFposes[j];
+	// 			Eigen::Matrix4f pose = Tw2rfinv * Twm * Tmf;
+	// 			poses.emplace_back(pose);
+	// 		}
+	// 	} else {
+	// 		for(size_t j=0; j<active_submaps[i]->vKFs.size(); ++j){
+	// 			Eigen::Matrix4f Tmf = active_submaps[i]->vKFs[j]->pose.cast<float>().matrix();
+	// 			Eigen::Matrix4f pose = Tw2rfinv * Twm * Tmf;
+	// 			poses.emplace_back(pose);	
+	// 		}
+	// 	}
+    // }
+    // // passives
+    // for (size_t i=0; i<passive_submaps.size(); ++i)
+    // {
+    // 	Eigen::Matrix4f Twm = passive_submaps[i]->poseGlobal.cast<float>().matrix();
+    // 	if(passive_submaps[i]->vKFposes.size()>0){
+	// 		for(size_t j=0; j<passive_submaps[i]->vKFposes.size(); ++j)
+	// 		{
+	// 			Eigen::Matrix4f Tmf = passive_submaps[i]->vKFposes[j];
+	// 			Eigen::Matrix4f pose = Tw2rfinv * Twm * Tmf;
+	// 			poses.emplace_back(pose);
+	// 		}
+	// 	} else {
+	// 		for(size_t j=0; j<passive_submaps[i]->vKFs.size(); ++j){
+	// 			Eigen::Matrix4f Tmf = passive_submaps[i]->vKFs[j]->pose.cast<float>().matrix();
+	// 			Eigen::Matrix4f pose = Tw2rfinv * Twm * Tmf;
+	// 			poses.emplace_back(pose);	
+	// 		}	
+	// 	}
+    // }
+    // return poses;
+}
+
+std::vector<std::pair<int, std::vector<float>>> SubmapManager::GetObjects(bool bMain)
+{
+	// bMain stands for visualise main cuboids only or all cuboids
+	std::vector<std::pair<int, std::vector<float>>> label_dim_pair;
+	std::vector<std::shared_ptr<Object3d>>::iterator it;
+	
+	int mapIdx = 0; // change to a proper setup later
+
+	for(it=vObjectMaps[renderIdx]->v_objects.begin(); it!=vObjectMaps[renderIdx]->v_objects.end(); ++it)
+	{
+		int label = (*it)->label;
+		
+		if(bMain){
+			std::shared_ptr<Cuboid3d> cub = (*it)->v_all_cuboids[(*it)->primary_cuboid_idx];
+			std::vector<float> corners{cub->cuboid_corner_pts.at<float>(0,0), cub->cuboid_corner_pts.at<float>(1,0), cub->cuboid_corner_pts.at<float>(2,0),
+								   	   cub->cuboid_corner_pts.at<float>(0,1), cub->cuboid_corner_pts.at<float>(1,1), cub->cuboid_corner_pts.at<float>(2,1),
+								       cub->cuboid_corner_pts.at<float>(0,2), cub->cuboid_corner_pts.at<float>(1,2), cub->cuboid_corner_pts.at<float>(2,2),
+								       cub->cuboid_corner_pts.at<float>(0,3), cub->cuboid_corner_pts.at<float>(1,3), cub->cuboid_corner_pts.at<float>(2,3),
+								       cub->cuboid_corner_pts.at<float>(0,4), cub->cuboid_corner_pts.at<float>(1,4), cub->cuboid_corner_pts.at<float>(2,4),
+								       cub->cuboid_corner_pts.at<float>(0,5), cub->cuboid_corner_pts.at<float>(1,5), cub->cuboid_corner_pts.at<float>(2,5),
+								       cub->cuboid_corner_pts.at<float>(0,6), cub->cuboid_corner_pts.at<float>(1,6), cub->cuboid_corner_pts.at<float>(2,6),
+								       cub->cuboid_corner_pts.at<float>(0,7), cub->cuboid_corner_pts.at<float>(1,7), cub->cuboid_corner_pts.at<float>(2,7)};
+			label_dim_pair.push_back(std::make_pair(label, corners));
+		}
+		else
+		{
+			for(size_t c=0; c<(*it)->v_all_cuboids.size(); ++c)
+			{
+				std::shared_ptr<Cuboid3d> cub = (*it)->v_all_cuboids[c];
+				std::vector<float> corners{cub->cuboid_corner_pts.at<float>(0,0), cub->cuboid_corner_pts.at<float>(1,0), cub->cuboid_corner_pts.at<float>(2,0),
+										cub->cuboid_corner_pts.at<float>(0,1), cub->cuboid_corner_pts.at<float>(1,1), cub->cuboid_corner_pts.at<float>(2,1),
+										cub->cuboid_corner_pts.at<float>(0,2), cub->cuboid_corner_pts.at<float>(1,2), cub->cuboid_corner_pts.at<float>(2,2),
+										cub->cuboid_corner_pts.at<float>(0,3), cub->cuboid_corner_pts.at<float>(1,3), cub->cuboid_corner_pts.at<float>(2,3),
+										cub->cuboid_corner_pts.at<float>(0,4), cub->cuboid_corner_pts.at<float>(1,4), cub->cuboid_corner_pts.at<float>(2,4),
+										cub->cuboid_corner_pts.at<float>(0,5), cub->cuboid_corner_pts.at<float>(1,5), cub->cuboid_corner_pts.at<float>(2,5),
+										cub->cuboid_corner_pts.at<float>(0,6), cub->cuboid_corner_pts.at<float>(1,6), cub->cuboid_corner_pts.at<float>(2,6),
+										cub->cuboid_corner_pts.at<float>(0,7), cub->cuboid_corner_pts.at<float>(1,7), cub->cuboid_corner_pts.at<float>(2,7)};
+				label_dim_pair.push_back(std::make_pair(label, corners));
+			}
+		}
+	}
+
+	// return dimensions;
+	return label_dim_pair;
+}
+
+
 void SubmapManager::writeMapToDisk()
 {
+	// dense maps with corresponding map poses
 	std::string pose_file_name = GlobalCfg.map_file + "_poses.txt";
 	std::vector<Eigen::Matrix4d> vPoseMaps;
 	for(int i=0; i<vActiveSubmaps.size(); ++i)
@@ -66,8 +179,14 @@ void SubmapManager::writeMapToDisk()
 		vPoseMaps.push_back(pDenseMap->GetPose().matrix());
 		pDenseMap->writeToDisk(file_name);
 	}
-	
 	writePosesToText(pose_file_name, vPoseMaps);
+
+	// object maps with kfs that detect the objects
+	for(int i=0; i<vObjectMaps.size(); ++i)
+	{
+		std::string file_name = GlobalCfg.map_file + "_" + std::to_string(i);
+		vObjectMaps[i]->writeObjectsToDisk(file_name);
+	}
 }
 
 void SubmapManager::writePosesToText(std::string file_name, 
@@ -100,28 +219,27 @@ void SubmapManager::writePosesToText(std::string file_name,
 
 void SubmapManager::readMapFromDisk()
 {
-	// read the map poses
+	// dense maps with corresponding map poses
 	std::string pose_file_name = GlobalCfg.map_file + "_poses.txt";
 	// std::vector<Eigen::Matrix4d> vSubmapPoses;
 	readPosesFromText(pose_file_name, vSubmapPoses);
 	std::cout << "- " << vSubmapPoses.size() << " map poses loaded." << std::endl;
-
-	// update already existed map
+	// update the existing map
+	std::cout << "Reading the dense maps:" << std::endl;
 	for(int i=0; i<vActiveSubmaps.size(); ++i)
 	{
 		std::string file_name = GlobalCfg.map_file + "_" + std::to_string(i) + ".data";	
-		std::cout << "Reading the dense map from file: " << file_name << std::endl;
+		std::cout << " " << file_name << std::endl;
 		auto pDenseMap = vActiveSubmaps[i];
 		pDenseMap->readFromDisk(file_name);
 		pDenseMap->SetPose(Sophus::SE3d()); //vPoseMaps[i]
 	}
-
 	// create new dense maps, if necessary
 	int num_active_maps = vActiveSubmaps.size();
 	for(int i=num_active_maps; i<GlobalCfg.mapSize; ++i)
 	{
 		std::string file_name = GlobalCfg.map_file + "_" + std::to_string(i) + ".data";
-		std::cout << "Reading the dense map from file: " << file_name << std::endl;
+		std::cout << " " << file_name << std::endl;
 		auto pDenseMap = new MapStruct(GlobalCfg.K);
 		pDenseMap->SetMeshEngine(pMesher);
 		pDenseMap->SetTracer(pRayTracer);
@@ -132,6 +250,37 @@ void SubmapManager::readMapFromDisk()
 
 		renderIdx = 0; // ?? set to i or 0 here???
 		ref_frame_id = 0;
+	}
+
+	if(GlobalCfg.bSemantic)
+	{
+		// object maps with kfs that detect the objects
+		std::cout << "Reading the object maps:" << std::endl;
+		// ONLY READ mapi_0 for now, update later
+		std::string file_name = GlobalCfg.map_file + "_" + std::to_string(0);
+		std::cout << " " << file_name << std::endl;
+		if(vObjectMaps.size() > 0){
+			vObjectMaps[0]->readObjectsFromDisk(file_name);
+		}else{
+			auto pObjectMap = new ObjectMap(0);
+			pObjectMap->readObjectsFromDisk(file_name);
+			vObjectMaps.push_back(pObjectMap);
+		}
+		// for(int i=0; i<vObjectMaps.size(); ++i)
+		// {
+		// 	std::string file_name = GlobalCfg.map_file + "_" + std::to_string(i);
+		// 	std::cout << " " << file_name << std::endl;
+		// 	vObjectMaps[i]->readObjectsFromDisk(file_name);
+		// }
+		// int num_object_maps = vObjectMaps.size();
+		// for(int i=num_object_maps; i<GlobalCfg.mapSize; ++i)
+		// {
+		// 	std::string file_name = GlobalCfg.map_file + "_" + std::to_string(i);
+		// 	std::cout << " " << file_name << std::endl;
+		// 	auto pObjectMap = new ObjectMap(i);
+		// 	pObjectMap->readObjectsFromDisk(file_name);
+		// 	vObjectMaps.push_back(pObjectMap);
+		// }
 	}
 }
 
@@ -283,88 +432,6 @@ void SubMapManager::CheckTrackAndRender(int cur_frame_id, int max_perct_idx){
 	}
 }
 
-void SubMapManager::AddKeyFrame(RgbdFramePtr currKF){
-	// extract key points from current kf
-	cv::Mat source_image = currKF->image;
-    auto frame_pose = currKF->pose.cast<float>();
-
-    // std::clock_t start = std::clock();
-    // cv::Mat raw_descriptors;
-    // std::vector<cv::KeyPoint> raw_keypoints;
-    // extractor->extract_features_surf(
-    //     source_image,
-    //     raw_keypoints,
-    //     raw_descriptors);
-    // std::cout << "# of raw keypoints is " << raw_keypoints.size() << std::endl;
-
-    // extractor->compute_3d_points(
-    //     currKF->vmap,
-    //     currKF->nmap,
-    //     raw_keypoints,
-    //     raw_descriptors,
-    //     currKF->cv_key_points,
-    //     currKF->descriptors,
-    //     currKF->key_points,
-    //     frame_pose);
-
-	// copy a version to store
-	auto kf = std::make_shared<RgbdFrame>();
-    currKF->copyTo(kf);
-    active_submaps[renderIdx]->vKFs.push_back(kf);
-    // std::cout << "# of 3d keypoints is " << kf->key_points.size() << std::endl;
-
-    // std::cout << "Detecting SURF keypoints takes "
-    // 		  << ( std::clock() - start ) / (double) CLOCKS_PER_SEC 
-    //           << " seconds" << std::endl;
-}
-
-std::vector<Eigen::Matrix<float, 4, 4>> SubMapManager::GetKFPoses(){
-	std::vector<Eigen::Matrix<float, 4, 4>> poses;
-	Eigen::Matrix4f Tw2rfinv = active_submaps[renderIdx]->poseGlobal.cast<float>().matrix().inverse();
-    
-    // actives
-    for (size_t i=0; i<active_submaps.size(); ++i)
-    {
-    	Eigen::Matrix4f Twm = active_submaps[i]->poseGlobal.cast<float>().matrix();
-		if(active_submaps[i]->vKFposes.size() > 0){
-			for(size_t j=0; j<active_submaps[i]->vKFposes.size(); ++j)
-			{
-				Eigen::Matrix4f Tmf = active_submaps[i]->vKFposes[j];
-				Eigen::Matrix4f pose = Tw2rfinv * Twm * Tmf;
-				poses.emplace_back(pose);
-			}
-		} else {
-			for(size_t j=0; j<active_submaps[i]->vKFs.size(); ++j){
-				Eigen::Matrix4f Tmf = active_submaps[i]->vKFs[j]->pose.cast<float>().matrix();
-				Eigen::Matrix4f pose = Tw2rfinv * Twm * Tmf;
-				poses.emplace_back(pose);	
-			}
-		}
-    }
-
-    // passives
-    for (size_t i=0; i<passive_submaps.size(); ++i)
-    {
-    	Eigen::Matrix4f Twm = passive_submaps[i]->poseGlobal.cast<float>().matrix();
-    	if(passive_submaps[i]->vKFposes.size()>0){
-			for(size_t j=0; j<passive_submaps[i]->vKFposes.size(); ++j)
-			{
-				Eigen::Matrix4f Tmf = passive_submaps[i]->vKFposes[j];
-				Eigen::Matrix4f pose = Tw2rfinv * Twm * Tmf;
-				poses.emplace_back(pose);
-			}
-		} else {
-			for(size_t j=0; j<passive_submaps[i]->vKFs.size(); ++j){
-				Eigen::Matrix4f Tmf = passive_submaps[i]->vKFs[j]->pose.cast<float>().matrix();
-				Eigen::Matrix4f pose = Tw2rfinv * Twm * Tmf;
-				poses.emplace_back(pose);	
-			}	
-		}
-    }
-
-    return poses;
-}
-
 void SubMapManager::GetPoints(float *pt3d, size_t &count, size_t max_size){
 	// count = 0;
 	// Sophus::SE3f Tw2rfinv = active_submaps[renderIdx]->poseGlobal.cast<float>().inverse();
@@ -412,49 +479,6 @@ void SubMapManager::GetPoints(float *pt3d, size_t &count, size_t max_size){
     // // std::cout << "NUM KEY POINTS: " << count << std::endl;
 }
 
-std::vector<std::pair<int, std::vector<float>>> SubMapManager::GetObjects(bool bMain)
-{
-	std::vector<std::pair<int, std::vector<float>>> label_dim_pair;
-
-	std::vector<std::shared_ptr<Object3d>>::iterator it;
-
-	for(it=active_submaps[renderIdx]->v_objects.begin(); it!=active_submaps[renderIdx]->v_objects.end(); ++it)
-	{
-		int label = (*it)->label;
-		
-		if(bMain){
-			std::shared_ptr<Cuboid3d> cub = (*it)->v_all_cuboids[(*it)->primary_cuboid_idx];
-			std::vector<float> corners{cub->cuboid_corner_pts.at<float>(0,0), cub->cuboid_corner_pts.at<float>(1,0), cub->cuboid_corner_pts.at<float>(2,0),
-								   	   cub->cuboid_corner_pts.at<float>(0,1), cub->cuboid_corner_pts.at<float>(1,1), cub->cuboid_corner_pts.at<float>(2,1),
-								       cub->cuboid_corner_pts.at<float>(0,2), cub->cuboid_corner_pts.at<float>(1,2), cub->cuboid_corner_pts.at<float>(2,2),
-								       cub->cuboid_corner_pts.at<float>(0,3), cub->cuboid_corner_pts.at<float>(1,3), cub->cuboid_corner_pts.at<float>(2,3),
-								       cub->cuboid_corner_pts.at<float>(0,4), cub->cuboid_corner_pts.at<float>(1,4), cub->cuboid_corner_pts.at<float>(2,4),
-								       cub->cuboid_corner_pts.at<float>(0,5), cub->cuboid_corner_pts.at<float>(1,5), cub->cuboid_corner_pts.at<float>(2,5),
-								       cub->cuboid_corner_pts.at<float>(0,6), cub->cuboid_corner_pts.at<float>(1,6), cub->cuboid_corner_pts.at<float>(2,6),
-								       cub->cuboid_corner_pts.at<float>(0,7), cub->cuboid_corner_pts.at<float>(1,7), cub->cuboid_corner_pts.at<float>(2,7)};
-			label_dim_pair.push_back(std::make_pair(label, corners));
-		}
-		else
-		{
-			for(size_t c=0; c<(*it)->v_all_cuboids.size(); ++c)
-			{
-				std::shared_ptr<Cuboid3d> cub = (*it)->v_all_cuboids[c];
-				std::vector<float> corners{cub->cuboid_corner_pts.at<float>(0,0), cub->cuboid_corner_pts.at<float>(1,0), cub->cuboid_corner_pts.at<float>(2,0),
-										cub->cuboid_corner_pts.at<float>(0,1), cub->cuboid_corner_pts.at<float>(1,1), cub->cuboid_corner_pts.at<float>(2,1),
-										cub->cuboid_corner_pts.at<float>(0,2), cub->cuboid_corner_pts.at<float>(1,2), cub->cuboid_corner_pts.at<float>(2,2),
-										cub->cuboid_corner_pts.at<float>(0,3), cub->cuboid_corner_pts.at<float>(1,3), cub->cuboid_corner_pts.at<float>(2,3),
-										cub->cuboid_corner_pts.at<float>(0,4), cub->cuboid_corner_pts.at<float>(1,4), cub->cuboid_corner_pts.at<float>(2,4),
-										cub->cuboid_corner_pts.at<float>(0,5), cub->cuboid_corner_pts.at<float>(1,5), cub->cuboid_corner_pts.at<float>(2,5),
-										cub->cuboid_corner_pts.at<float>(0,6), cub->cuboid_corner_pts.at<float>(1,6), cub->cuboid_corner_pts.at<float>(2,6),
-										cub->cuboid_corner_pts.at<float>(0,7), cub->cuboid_corner_pts.at<float>(1,7), cub->cuboid_corner_pts.at<float>(2,7)};
-				label_dim_pair.push_back(std::make_pair(label, corners));
-			}
-		}
-	}
-
-	// return dimensions;
-	return label_dim_pair;
-}
 std::vector<std::pair<int, std::vector<float>>> SubMapManager::GetObjectCuboids()
 {
 	std::vector<std::pair<int, std::vector<float>>> label_dim_pair;

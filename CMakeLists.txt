@@ -89,6 +89,7 @@ PRIVATE
     src/mapping/VoxelMap.cu
     src/mapping/RayTraceEngine.cu
     src/mapping/MeshEngine.cu
+    src/mapping/ObjectMap.cpp
 
     src/relocalization/ransac_ao.cpp
     src/relocalization/relocalizer.cpp

@@ -249,7 +249,7 @@ Cuboid3d::Cuboid3d(std::string file_name, int start_line)
 void Cuboid3d::writeToFile(std::string file_name)
 {
     std::ofstream semanticfile;
-    semanticfile.open(file_name+"-semantic.txt", std::ios::app);
+    semanticfile.open(file_name, std::ios::app);
     if (semanticfile.is_open())
     {
         // semanticfile << "New Cuboid:\n";
@@ -292,7 +292,7 @@ void Cuboid3d::writeToFile(std::string file_name)
 }
 void Cuboid3d::readFromFile(std::string file_name, int start_line)
 {
-    std::ifstream semanticfile(file_name+"-semantic.txt", std::ios::in);
+    std::ifstream semanticfile(file_name, std::ios::in);
     if (semanticfile.is_open())
     {
         std::string line;
