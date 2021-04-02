@@ -10,16 +10,20 @@ namespace fusion
 
 class Optimizer;
 
-Relocalizer::Relocalizer(const Eigen::Matrix3f intrinsic_inv) : KInv(intrinsic_inv)
-{
-    label_pose.push_back(3);
-    label_pose.push_back(5);
-    label_vec.push_back(1);
-    label_vec.push_back(2);
-    label_vec.push_back(4);
-    label_vec.push_back(6);
-}
+Relocalizer::Relocalizer()
+{}
 
+// Relocalizer::Relocalizer(const Eigen::Matrix3f intrinsic_inv) : KInv(intrinsic_inv)
+// {
+//     label_pose.push_back(3);
+//     label_pose.push_back(5);
+//     label_vec.push_back(1);
+//     label_vec.push_back(2);
+//     label_vec.push_back(4);
+//     label_vec.push_back(6);
+// }
+
+/* Feature point based approach
 void Relocalizer::set_target_frame(std::shared_ptr<RgbdFrame> frame)
 {
     target_frame = frame;
@@ -27,63 +31,64 @@ void Relocalizer::set_target_frame(std::shared_ptr<RgbdFrame> frame)
 
 void Relocalizer::compute_pose_candidates(std::vector<Sophus::SE3d> &candidates)
 {
-    // target_frame->pose = Sophus::SE3d();
-    // std::vector<cv::KeyPoint> raw_keypoints;
-    // cv::Mat raw_descriptors;
+    target_frame->pose = Sophus::SE3d();
+    std::vector<cv::KeyPoint> raw_keypoints;
+    cv::Mat raw_descriptors;
 
-    // cv::cuda::GpuMat depth(target_frame->depth);
-    // cv::cuda::GpuMat vmap_gpu, nmap_gpu;
-    // backProjectDepth(depth, vmap_gpu, KInv);
-    // computeNMap(vmap_gpu, nmap_gpu);
+    cv::cuda::GpuMat depth(target_frame->depth);
+    cv::cuda::GpuMat vmap_gpu, nmap_gpu;
+    backProjectDepth(depth, vmap_gpu, KInv);
+    computeNMap(vmap_gpu, nmap_gpu);
 
-    // extractor->extract_features_surf(
-    //     target_frame->image,
-    //     raw_keypoints,
-    //     raw_descriptors);
+    extractor->extract_features_surf(
+        target_frame->image,
+        raw_keypoints,
+        raw_descriptors);
 
-    // extractor->compute_3d_points(
-    //     cv::Mat(vmap_gpu),
-    //     cv::Mat(nmap_gpu),
-    //     raw_keypoints,
-    //     raw_descriptors,
-    //     target_frame->cv_key_points,
-    //     target_frame->descriptors,
-    //     target_frame->key_points,
-    //     target_frame->pose.cast<float>());
+    extractor->compute_3d_points(
+        cv::Mat(vmap_gpu),
+        cv::Mat(nmap_gpu),
+        raw_keypoints,
+        raw_descriptors,
+        target_frame->cv_key_points,
+        target_frame->descriptors,
+        target_frame->key_points,
+        target_frame->pose.cast<float>());
 
-    // std::vector<std::vector<cv::DMatch>> matches;
-    // matcher->match_hamming_knn(
-    //     map_descriptors,
-    //     target_frame->descriptors,
-    //     matches, 2);
+    std::vector<std::vector<cv::DMatch>> matches;
+    matcher->match_hamming_knn(
+        map_descriptors,
+        target_frame->descriptors,
+        matches, 2);
 
-    // std::vector<cv::DMatch> list;
-    // std::vector<std::vector<cv::DMatch>> candidate_matches;
-    // matcher->filter_matches_ratio_test(matches, list);
-    // candidate_matches.push_back(list);
-    // // matcher->filter_matches_pair_constraint(target_frame->key_points, map_points, matches, candidate_matches);
+    std::vector<cv::DMatch> list;
+    std::vector<std::vector<cv::DMatch>> candidate_matches;
+    matcher->filter_matches_ratio_test(matches, list);
+    candidate_matches.push_back(list);
+    // matcher->filter_matches_pair_constraint(target_frame->key_points, map_points, matches, candidate_matches);
 
-    // for (const auto &match_list : candidate_matches)
-    // {
-    //     std::vector<Eigen::Vector3f> src_pts, dst_pts;
-    //     for (const auto &match : match_list)
-    //     {
-    //         src_pts.push_back(map_points[match.trainIdx]->pos);
-    //         dst_pts.push_back(target_frame->key_points[match.queryIdx]->pos);
-    //     }
+    for (const auto &match_list : candidate_matches)
+    {
+        std::vector<Eigen::Vector3f> src_pts, dst_pts;
+        for (const auto &match : match_list)
+        {
+            src_pts.push_back(map_points[match.trainIdx]->pos);
+            dst_pts.push_back(target_frame->key_points[match.queryIdx]->pos);
+        }
 
-    //     std::vector<bool> outliers;
-    //     Eigen::Matrix4f estimate;
-    //     float inlier_ratio, confidence;
-    //     PoseEstimator::RANSAC(src_pts, dst_pts, outliers, estimate, inlier_ratio, confidence);
+        std::vector<bool> outliers;
+        Eigen::Matrix4f estimate;
+        float inlier_ratio, confidence;
+        PoseEstimator::RANSAC(src_pts, dst_pts, outliers, estimate, inlier_ratio, confidence);
 
-    //     const int no_inliers = std::count(outliers.begin(), outliers.end(), false);
-    //     std::cout << estimate << std::endl
-    //               << no_inliers << std::endl;
+        const int no_inliers = std::count(outliers.begin(), outliers.end(), false);
+        std::cout << estimate << std::endl
+                  << no_inliers << std::endl;
 
-    //     candidates.emplace_back(Sophus::SE3f(estimate).cast<double>());
-    // }
+        candidates.emplace_back(Sophus::SE3f(estimate).cast<double>());
+    }
 }
+*/
 
 // Multiple instances per object class exist.
 std::vector<Eigen::Matrix4d> Relocalizer::object_data_association(std::vector<std::shared_ptr<Object3d>> frame_obj,

@@ -31,9 +31,10 @@ public:
   DenseTracking();
   // DenseTracking(const IntrinsicMatrix K, const int NUM_PYR);
   TrackingResult compute_transform(const RgbdImagePtr reference, const RgbdImagePtr current, const TrackingContext &c);
+  TrackingResult compute_transform_depth_centroids(const RgbdImagePtr reference, const RgbdImagePtr current, const TrackingContext &c);
   // TrackingResult compute_transform_depth_only(const RgbdImagePtr reference, const RgbdImagePtr current, const TrackingContext &c);
-  // TrackingResult compute_transform_depth_centroids(const RgbdImagePtr reference, const RgbdImagePtr current, const TrackingContext &c);
-
+  
+  /* Attepmt to not use device image in tracking. Result in noisy reconstruction.
   TrackingResult compute_transform(const TrackingContext &c);
   void set_source_image(cv::Mat img, const int num_pyr);
   void set_source_intensity(cv::cuda::GpuMat intensity, const int num_pyr);
@@ -55,21 +56,9 @@ public:
   cv::cuda::GpuMat get_intensity_ref(const int &level = 0);
   cv::cuda::GpuMat get_vmap_ref(const int &level = 0);
   cv::cuda::GpuMat get_nmap_ref(const int &level = 0);
+  */
   
 private:
-  cv::cuda::GpuMat src_image, ref_image;
-  std::vector<cv::cuda::GpuMat> intensity_src_pyr;
-  std::vector<cv::cuda::GpuMat> intensity_dx_pyr;
-  std::vector<cv::cuda::GpuMat> intensity_dy_pyr;
-  std::vector<cv::cuda::GpuMat> depth_src_pyr;
-  std::vector<cv::cuda::GpuMat> vmap_src_pyr;
-  std::vector<cv::cuda::GpuMat> nmap_src_pyr;
-
-  std::vector<cv::cuda::GpuMat> intensity_ref_pyr;
-  std::vector<cv::cuda::GpuMat> depth_ref_pyr;
-  std::vector<cv::cuda::GpuMat> vmap_ref_pyr;
-  std::vector<cv::cuda::GpuMat> nmap_ref_pyr;
-
   Eigen::Matrix<float, 6, 6> icp_hessian;
   Eigen::Matrix<float, 6, 6> rgb_hessian;
   Eigen::Matrix<float, 6, 6> joint_hessian;
@@ -102,6 +91,21 @@ private:
       const Sophus::SE3d &pose,
       float *jtj, float *jtr,
       float *residual);
+
+  /* Attepmt to not use device image in tracking. Result in noisy reconstruction.
+  cv::cuda::GpuMat src_image, ref_image;
+  std::vector<cv::cuda::GpuMat> intensity_src_pyr;
+  std::vector<cv::cuda::GpuMat> intensity_dx_pyr;
+  std::vector<cv::cuda::GpuMat> intensity_dy_pyr;
+  std::vector<cv::cuda::GpuMat> depth_src_pyr;
+  std::vector<cv::cuda::GpuMat> vmap_src_pyr;
+  std::vector<cv::cuda::GpuMat> nmap_src_pyr;
+
+  std::vector<cv::cuda::GpuMat> intensity_ref_pyr;
+  std::vector<cv::cuda::GpuMat> depth_ref_pyr;
+  std::vector<cv::cuda::GpuMat> vmap_ref_pyr;
+  std::vector<cv::cuda::GpuMat> nmap_ref_pyr;
+  */
 };
 
 } // namespace fusion

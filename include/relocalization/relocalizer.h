@@ -11,9 +11,10 @@ namespace fusion
 class Relocalizer
 {
 public:
-    Relocalizer(const Eigen::Matrix3f intrinsic_inv);
+    Relocalizer();
+    // Relocalizer(const Eigen::Matrix3f intrinsic_inv);
     void set_target_frame(std::shared_ptr<RgbdFrame> frame);
-    void compute_pose_candidates(std::vector<Sophus::SE3d> &candidates);
+    // void compute_pose_candidates(std::vector<Sophus::SE3d> &candidates);
 
     // Multiple instances of the same class
     std::vector<Eigen::Matrix4d> object_data_association(std::vector<std::shared_ptr<Object3d>> frame_obj, 
@@ -62,22 +63,6 @@ public:
                                          bool b_use_corners,
                                          bool & b_enough_corresp, bool & b_recovered, int & mapId);
 private:
-    std::vector<int> label_pose, label_vec;
-
-    std::shared_ptr<RgbdFrame> target_frame;
-    Eigen::Matrix3f KInv;
-
-    // Initialize a Map of string & vector of int using initializer_list
-    // this weight represents the relative size of objects
-    // smaller value tends to be inlier
-    // std::map<int, double> maWeights = 	{
-    //                             { 1, 0.9},
-    //                             { 2, 0.9},
-    //                             { 3, 0.8},
-    //                             { 4, 1.},
-    //                             { 5, 0.7},
-    //                             { 6, 1.}
-    //                             };
     std::map<int, double> maWeights = 	{
                                 { 1, 1.},
                                 { 2, 1.},
@@ -94,6 +79,21 @@ private:
                                 {5, "laptop"},
                                 {6, "mug"}
                                 };
+    // std::vector<int> label_pose, label_vec;
+    // std::shared_ptr<RgbdFrame> target_frame;
+    // Eigen::Matrix3f KInv;
+
+    // Initialize a Map of string & vector of int using initializer_list
+    // this weight represents the relative size of objects
+    // smaller value tends to be inlier
+    // std::map<int, double> maWeights = 	{
+    //                             { 1, 0.9},
+    //                             { 2, 0.9},
+    //                             { 3, 0.8},
+    //                             { 4, 1.},
+    //                             { 5, 0.7},
+    //                             { 6, 1.}
+    //                             };
 };
 
 } // namespace fusion

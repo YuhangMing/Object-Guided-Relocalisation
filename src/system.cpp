@@ -57,9 +57,8 @@ System::System(bool bSemantic, bool bLoadDiskMap)
                 << "   out of " << total_0 << " MB total memroy." << std::endl;
     #endif
 
-    /* Reloc disabled for now.
-    relocalizer = std::make_shared<Relocalizer>(base);
-    */
+    // relocalizer = std::make_shared<Relocalizer>(base);
+    relocalizer = std::make_shared<Relocalizer>();
     
     if(bSemantic){
     #ifdef CUDA_MEM
@@ -205,13 +204,9 @@ void System::process_images(const cv::Mat depth, const cv::Mat image,
             // update pose of current_frame and reference_frame in corresponding DeviceImage
             odometry->trackFrame(current_frame);
             
-            // /* Semantic & Reloc diasbled for now
             //---- only create kf in the rendering map ----
             if(keyframe_needed() && i == renderIdx && !odometry->trackingLost)
-            {
                 create_keyframe();
-            }
-            // */
         }
 
         /* RENDERING */
@@ -255,11 +250,9 @@ void System::process_images(const cv::Mat depth, const cv::Mat image,
             auto current_image = odometry->get_current_image();
             auto current_frame = current_image->get_reference_frame();
             
-            cv::cuda::GpuMat cuDepth, cuVMap; // cuImage, cuNMap;
-            // current_image->get_image().copyTo(cuImage);
+            cv::cuda::GpuMat cuDepth, cuVMap; 
             current_image->get_raw_depth().copyTo(cuDepth);
             current_image->get_vmap().copyTo(cuVMap);
-            // current_image->get_nmap(0).copyTo(cuNMap);
             Sophus::SE3d Tcm = current_frame->pose; // transformation from camera to map
             // std::cout << Tcm.matrix() << std::endl;
             
@@ -268,9 +261,6 @@ void System::process_images(const cv::Mat depth, const cv::Mat image,
             manager->vActiveSubmaps[i]->Fuse(cuDepth, Tcm);
 
             // std::cout << "- Raytracing." << std::endl;
-            // cv::Mat test_vmap, test_nmap;
-            // cuVMap.download(test_vmap);
-            // // cuNMap.download(test_nmap);
             manager->vActiveSubmaps[i]->RayTrace(Tcm);
             cuVMap = manager->vActiveSubmaps[i]->GetRayTracingResult();
             
@@ -278,17 +268,14 @@ void System::process_images(const cv::Mat depth, const cv::Mat image,
             reference_image->resize_device_map(cuVMap); 
             // cv::Mat test_raycasted_vmap;
             // cuVMap.download(test_raycasted_vmap);
-            // // cv::imshow("nmap before raycast", test_nmap);
-            // cv::imshow("vmap before raycast", test_vmap);
             // cv::imshow("vmap after raycast", test_raycasted_vmap);
             // cv::waitKey(0);
 
-            // /*Semantic & Reloc diasbled for now
             // add new keyframe in the map & calculate cuboids for objects detected
             if(hasNewKeyFrame && bSemantic){
                 manager->AddKeyFrame(current_keyframe->pose.matrix().cast<float>()); // DO WE NEED THIS?
-                reference_image->downloadVNM(odometry->vModelFrames[i], false);
                 /* Store vertex map from current KF.
+                reference_image->downloadVNM(odometry->vModelFrames[i], false);
                 // Store vertex map of current KF as point cloud in the file.
                 // std::cout << "Type of vmap is ";
                 // std::cout << odometry->vModelFrames[i]->vmap.type() << std::endl;
@@ -317,7 +304,6 @@ void System::process_images(const cv::Mat depth, const cv::Mat image,
                     // manager->active_submaps[i]->raycast(reference_image->get_vmap(), reference_image->get_nmap(0), reference_image->get_object_mask(), reference_frame->pose);
                 }
             }
-            // */
             
             // if(manager->active_submaps[i]->bRender){
             //     // update the map
@@ -368,18 +354,15 @@ void System::process_images(const cv::Mat depth, const cv::Mat image,
             // set current map idx to trackIdx in the odometry
             odometry->setTrackIdx(i);
         }
-
         /* RELOCALIZATION */
         else
         {
-            std::cout << "Relocalisation disabled for now." << std::endl;
-            return;
-
-            // std::cout << "\n !!!! Tracking Lost at frame " << frame_id << "! Trying to recover..." << std::endl;
-            // if(!bSemantic)
-            //     return;
-            // reloc_frame_id++;
-            // relocalization();
+            std::cout << "\n !!!! Tracking Lost at frame " << frame_id << "! Trying to recover..." << std::endl;
+            if(!bSemantic)
+                return;
+            reloc_frame_id++;
+            relocalization();
+            manager->AddKeyFrame(current_keyframe->pose.matrix().cast<float>());
         }
 
         // if(bSubmapping)
@@ -464,6 +447,238 @@ void System::process_images(const cv::Mat depth, const cv::Mat image,
 
     frame_id += 1;
     // std::cout << "FINISHED current frame.\n" << std::endl;
+}
+
+void System::relocalization()
+{
+
+#ifdef LOG
+    std::string log_string = "---- Tracking Lost at frame " + std::to_string(frame_id) + ". Trying to recover...\n";
+#endif
+
+    std::clock_t start = std::clock();
+    // perform OBJECT based relocalization
+    //-step 1: detect obejcts and estimate poses/cuboids in the current frame
+    std::cout << "STEP 1: Extract objects." << std::endl;
+    auto current_image = odometry->get_current_image();
+    // current_image->downloadVNM(current_frame, true);
+    extract_semantics(current_frame, false, 1, 0.002, 5, 7);
+#ifdef LOG
+    log_string += " # of detection stored: " + std::to_string(current_frame->numDetection) + "\n";
+#endif
+    
+    //-step 2: solve the absolute orientation (AO) problem (centroid of box and corresponding cuboid)
+    std::cout << "STEP 2: Object based relocalisation." << std::endl;
+    bool b_recovered = false, 
+         b_enough_corresp = false;
+    std::vector<std::vector<std::pair<int, std::pair<int, int>>>> vv_inlier_pairs;
+    // std::vector<std::vector<std::pair<int, int>>> vv_best_map_cub_labidx;
+    std::vector<Eigen::Matrix4d> vtmp_pose_candidates = relocalizer->object_data_association(
+                                    current_frame->vObjects, 
+                                    manager->vObjectMaps[renderIdx]->v_objects,
+                                    vv_inlier_pairs,
+                                    b_enough_corresp, b_recovered
+                                );
+
+    if(!b_enough_corresp){
+        current_frame->pose = Sophus::SE3d(Eigen::Matrix4d::Identity());
+#ifdef LOG
+    log_string += " !! Relocalization faild. At least 3 pairs of correspondences needed.\n";
+#endif
+    }
+    else
+    {
+    //-step 3: use the pose from prob AO as the candidate for icp optimization
+        std::cout << "STEP 3: Use icp to validate pose candidates." << std::endl;
+        float loss;
+        float best_loss = std::numeric_limits<float>::max();
+        int recovered_id = -1,
+            best_loss_id = -1;
+        bool valid_pose = false,
+             b_recovered = false;
+        int num_of_AO_candidate = vtmp_pose_candidates.size();
+#ifdef LOG
+    log_string += "In total " + std::to_string(num_of_AO_candidate) + " candidates stored.\n";
+    log_string += std::to_string(vv_inlier_pairs[0].size()) + " pairs on inliers are stored.\n";
+#endif
+        for(size_t pi=0; pi<num_of_AO_candidate; ++pi)
+        {
+            // Get pose candidate
+            Eigen::Matrix4d tmp_pose = vtmp_pose_candidates[pi];
+            if(std::isnan(tmp_pose.sum())){
+#ifdef LOG
+    log_string +=  " !! Invalid pose for candidate " + std::to_string(pi) + "\n";
+#endif
+                continue;
+            }
+            valid_pose = true;
+            Sophus::SE3d Tcm = Sophus::SE3d(tmp_pose);
+            current_frame->pose = Tcm;
+
+            // copy current frame
+            RgbdFramePtr current_frame_copy = std::make_shared<RgbdFrame>();
+            current_frame->copyTo(current_frame_copy);
+            
+            // Prepare centroids for icp optimisation
+            int map_cub_idx = int(pi/2);
+            // update cent_matrix with the inlier map cuboid's centroids
+            // position w.r.t. frame coordinate
+            // std::cout << "Keep inlier cub centroids only in current frame." << std::endl;
+            current_frame->UpdateFrameInliers(vv_inlier_pairs[map_cub_idx]);
+            // std::cout << "Find corresponding inlier map centroids." << std::endl;
+            current_frame_copy->ReprojectMapInliers(manager->vObjectMaps[renderIdx]->v_objects,
+                                                    vv_inlier_pairs[map_cub_idx]);
+            // std::cout << "Update reference(model) frame wiht map centroids." << std::endl;
+            odometry->relocUpdate(current_frame_copy);
+
+            // Prepare vertex map for icp optimisation
+            manager->vActiveSubmaps[renderIdx]->RayTrace(Tcm);
+            cv::cuda::GpuMat cuVMap = manager->vActiveSubmaps[renderIdx]->GetRayTracingResult();
+            auto reference_image = odometry->get_reference_image(renderIdx);
+            reference_image->resize_device_map(cuVMap); 
+
+            // ICP optimising
+            // depth only ICP and store the pose after icp in the corrresponding position
+            // odometry->trackDepthOnly(current_frame, loss);                  // - depth only
+            odometry->trackDepthAndCentroid(current_frame, loss);           // - depth + centroid
+            Eigen::Matrix4d pose_optimized = current_frame->pose.matrix();
+            vtmp_pose_candidates.push_back(pose_optimized);
+
+            // Compare
+            // both candidates lost, than set to reloc failed
+            if(loss < best_loss)
+            {
+                best_loss = loss;
+                best_loss_id = pi;
+                if(!odometry->trackingLost){
+                    b_recovered = true;
+                    recovered_id = vtmp_pose_candidates.size()-1;
+                }
+            }
+#ifdef LOG
+    log_string += " Candidate " + std::to_string(pi) + ": ";
+    if(b_recovered)
+        log_string += "RECOVERED\n";
+    else
+        log_string += "NOT RECOVERED\n";  
+    Eigen::Vector3d tmpTrans = tmp_pose.topRightCorner(3,1);
+    Eigen::Vector3d gtTrans = vGTposes[reloc_frame_id-1].cast<double>().topRightCorner(3,1);
+    Eigen::Vector3d curTrans = current_frame->pose.matrix().topRightCorner(3,1);
+    log_string += "   Translational Diff: " + std::to_string((gtTrans-tmpTrans).norm()) + "\n";
+    log_string += "            after icp: " + std::to_string((gtTrans-curTrans).norm());
+    log_string += "    icp (Depth+Centroid) loss is " + std::to_string(loss) + "\n";
+#endif
+        }
+        
+        std::cout << "STEP 4: Prepare for next tracking." << std::endl;
+        if(b_recovered && valid_pose){
+            // // TEST the result without depth-centroid icp
+            // recovered_id = 0; 
+            // std::cout << "---- Best id: " << recovered_id << " out of " << vtmp_pose_candidates.size() << std::endl;
+            // std::cout << vtmp_pose_candidates[0] << std::endl;
+            // std::cout << vtmp_pose_candidates[1] << std::endl;
+            // //////////////////////////////////////////////////
+
+            // update current frame with best pose
+            current_frame->pose = Sophus::SE3d( vtmp_pose_candidates[recovered_id] );            
+            // raycast again for next tracking
+            manager->vActiveSubmaps[renderIdx]->RayTrace(current_frame->pose);
+            cv::cuda::GpuMat cuVMap_final = manager->vActiveSubmaps[renderIdx]->GetRayTracingResult();
+            auto reference_image = odometry->get_reference_image(renderIdx);
+            reference_image->resize_device_map(cuVMap_final); 
+
+            // set to false in visualization mode
+            b_reloc_attp = true;
+            // b_reloc_attp = false;
+            odometry->trackingLost = false;
+            
+            // store the relocalized frame as a new KeyFrame
+            current_keyframe = current_frame;
+            hasNewKeyFrame = true;
+#ifdef LOG
+    log_string += "Relocalization SUCCEEDED (with " + std::to_string(recovered_id) + ")\n\n";
+#endif
+            // std::cout << "Relocalization SUCCEEDED (with " + std::to_string(recovered_id) + ")" << std::endl;
+        }
+        else
+        {
+            // // TEST the result without depth-centroid icp
+            // best_loss_id = 0; 
+            // std::cout << "---- Best id: " << best_loss_id << " out of " << vtmp_pose_candidates.size() << std::endl;
+            // std::cout << vtmp_pose_candidates[0] << std::endl;
+            // std::cout << vtmp_pose_candidates[1] << std::endl;
+            // //////////////////////////////////////////////////
+
+            // set to true in visualization mode
+            b_reloc_attp = false;
+            // b_reloc_attp = true;
+
+            // double check if the candidate is a valid orthogonal matrix
+            Eigen::Matrix3d tmpR = vtmp_pose_candidates[best_loss_id].topLeftCorner<3, 3>();
+            if( (tmpR*tmpR.transpose()).isIdentity(1e-3) )
+                current_frame->pose = Sophus::SE3d( vtmp_pose_candidates[best_loss_id] );
+            else
+                current_frame->pose = Sophus::SE3d(Eigen::Matrix4d::Identity());
+            
+            odometry->trackingLost = true;
+            hasNewKeyFrame = false;
+
+#ifdef LOG
+    log_string += "Relocalization FAILED (with " + std::to_string(best_loss_id) + "\n\n";
+#endif
+            // std::cout << "Relocalization FAILED (with " + std::to_string(best_loss_id) + "/1)\n";
+        }
+    } // if enough correspondences
+
+#ifdef LOG
+    // log detailed relocalization information
+    std::string name_log = "/home/yohann/SLAMs/object-guided-relocalisation/"+output_file_name+"_log.txt";
+    std::ofstream log_file;
+    log_file.open(name_log, std::ios::app);
+    if(log_file.is_open())
+    {
+        log_file << log_string;
+    }
+    else
+    {
+        std::cout << "!!!!ERROR: Unable to open the pose file." << std::endl;
+    }
+    log_file.close();
+#endif
+    
+    // // store the recovered pose
+    // Eigen::Matrix4d tmp_p = current_frame->pose.matrix();
+    // Eigen::Matrix3d rot = tmp_p.topLeftCorner<3,3>();
+    // Eigen::Vector3d trans = tmp_p.topRightCorner<3,1>();
+    // Eigen::Quaterniond quat(rot);
+    // std::string name_pose = "/home/yohann/SLAMs/object-guided-relocalisation/pose_info/CENT/"+output_file_name+".txt";
+    // std::ofstream pose_file;
+    // pose_file.open(name_pose, std::ios::app);
+    // if(pose_file.is_open())
+    // {
+    //     pose_file << current_frame->id << " " 
+    //             << trans(0) << " " << trans(1) << " " << trans(2) << " "
+    //             << quat.x() << " " << quat.y() << " " << quat.z() << " " << quat.w()
+    //             << "\n";
+    // }
+    // else
+    // {
+    //     std::cout << "!!!!ERROR: Unable to open the pose file." << std::endl;
+    // }
+    // pose_file.close();
+
+    // // // Test with visual
+    // // Eigen::Vector3d gtTrans = vGTposes[reloc_frame_id-1].cast<double>().topRightCorner(3,1);
+    // // if((gtTrans-trans).norm() > 0.05){
+    // //     pause_window = true;
+    // // } else {
+    // //     pause_window = false;
+    // // }
+
+    
+    std::cout << "#### Relocalization process takes "
+                << ( std::clock() - start ) / (double) CLOCKS_PER_SEC 
+                << " seconds; " << std::endl;
 }
 
 
@@ -711,250 +926,6 @@ void System::relocalize_image(const cv::Mat depth, const cv::Mat image, const fu
 
     frame_id += 1;
     // frame_id += 111;
-}
-
-void System::relocalization()
-{
-
-#ifdef LOG
-    std::string log_string = "---- Tracking Lost at frame " + std::to_string(frame_id) + ". Trying to recover...\n";
-#endif
-
-    std::clock_t start = std::clock();
-    // perform OBJECT based relocalization
-    //-step 1: detect obejcts and estimate poses/cuboids in the current frame
-    std::cout << "STEP 1: Extract objects." << std::endl;
-    auto current_image = odometry->get_current_image();
-    current_image->downloadVNM(current_frame, true);
-    extract_semantics(current_frame, false, 1, 0.002, 5, 7);
-#ifdef LOG
-    log_string += " # of detection stored: " + std::to_string(current_frame->numDetection) + "\n";
-#endif
-    
-    //-step 2: solve the absolute orientation (AO) problem (centroid of box and corresponding cuboid)
-    std::cout << "STEP 2: Object based relocalisation." << std::endl;
-    bool b_recovered = false, 
-         b_enough_corresp = false;
-    std::vector<std::vector<std::pair<int, std::pair<int, int>>>> vv_inlier_pairs;
-    // std::vector<std::vector<std::pair<int, int>>> vv_best_map_cub_labidx;
-    std::vector<Eigen::Matrix4d> vtmp_pose_candidates = relocalizer->object_data_association(
-                                    current_frame->vObjects, 
-                                    manager->active_submaps[renderIdx]->v_objects,
-                                    vv_inlier_pairs,
-                                    b_enough_corresp, b_recovered
-                                );
-
-    if(!b_enough_corresp){
-        current_frame->pose = Sophus::SE3d(Eigen::Matrix4d::Identity());
-#ifdef LOG
-    log_string += " !! Relocalization faild. At least 3 pairs of correspondences needed.\n";
-#endif
-    }
-    else
-    {
-    //-step 3: use the pose from prob AO as the candidate for icp optimization
-        std::cout << "STEP 3: Use icp to validate pose candidates." << std::endl;
-        float loss;
-        float best_loss = std::numeric_limits<float>::max();
-        int recovered_id = -1,
-            best_loss_id = -1;
-        bool valid_pose = false,
-             b_recovered = false;
-        int num_of_AO_candidate = vtmp_pose_candidates.size();
-#ifdef LOG
-    log_string += "In total " + std::to_string(num_of_AO_candidate) + " candidates stored.\n";
-    log_string += std::to_string(vv_inlier_pairs[0].size()) + " pairs on inliers are stored.\n";
-#endif
-        for(size_t pi=0; pi<num_of_AO_candidate; ++pi)
-        {
-            // Get pose candidate
-            Eigen::Matrix4d tmp_pose = vtmp_pose_candidates[pi];
-            if(std::isnan(tmp_pose.sum())){
-#ifdef LOG
-    log_string +=  " !! Invalid pose for candidate " + std::to_string(pi) + "\n";
-#endif
-                continue;
-            }
-            valid_pose = true;
-            current_frame->pose = Sophus::SE3d(tmp_pose);
-
-            // copy current frame
-            RgbdFramePtr current_frame_copy = std::make_shared<RgbdFrame>();
-            current_frame->copyTo(current_frame_copy);
-            // update cent_matrix with the inlier map cuboid's centroids
-            int map_cub_idx = int(pi/2);
-            std::cout << "Updating frame cub centroid: " << map_cub_idx << std::endl;
-            current_frame->UpdateFrameInliers(vv_inlier_pairs[map_cub_idx]);
-            std::cout << "Updated. Reprojecint..." << std::endl;
-            current_frame_copy->ReprojectMapInliers(manager->active_submaps[renderIdx]->v_objects,
-                                                    vv_inlier_pairs[map_cub_idx]);
-            std::cout << "done" << std::endl;
-            // current_frame->UpdateFrameInliers(vv_inlier_pairs[map_cub_idx],
-            //                                   vv_best_map_cub_labidx[map_cub_idx]);
-            // current_frame_copy->ReprojectMapInliers(manager->active_submaps[renderIdx]->v_objects,
-            //                                         vv_inlier_pairs[map_cub_idx],
-            //                                         vv_best_map_cub_labidx[map_cub_idx]);
-            
-            // update the referecne/model frame
-            std::cout << "Updating reference/model frame" << std::endl;
-            odometry->relocUpdate(current_frame_copy);
-            auto reference_image = odometry->get_reference_image(renderIdx);
-            auto reference_frame = reference_image->get_reference_frame();
-
-            std::cout << "Raycasting" << std::endl;
-            // Raycast to update vmap and nmap in the reference/model frame
-            manager->active_submaps[renderIdx]->check_visibility(reference_image);
-            manager->active_submaps[renderIdx]->raycast(reference_image->get_vmap(), reference_image->get_nmap(0), reference_frame->pose);
-            reference_image->resize_device_map();
-
-            std::cout << "ICPing" << std::endl;
-            // depth only ICP and store the pose after icp in the corrresponding position
-            // odometry->trackDepthOnly(current_frame, loss);                  // - depth only
-            odometry->trackDepthAndCentroid(current_frame, loss);           // - depth + centroid
-            Eigen::Matrix4d pose_optimized = current_frame->pose.matrix();
-            vtmp_pose_candidates.push_back(pose_optimized);
-            std::cout << "ICP done. " << std::endl;
-
-            // Compare
-            // both candidates lost, than set to reloc failed
-            if(loss < best_loss)
-            {
-                best_loss = loss;
-                best_loss_id = pi;
-                if(!odometry->trackingLost){
-                    b_recovered = true;
-                    recovered_id = vtmp_pose_candidates.size()-1;
-                }
-            }
-#ifdef LOG
-    log_string += " Candidate " + std::to_string(pi) + ": ";
-    if(b_recovered)
-        log_string += "RECOVERED\n";
-    else
-        log_string += "NOT RECOVERED\n";  
-    Eigen::Vector3d tmpTrans = tmp_pose.topRightCorner(3,1);
-    Eigen::Vector3d gtTrans = vGTposes[reloc_frame_id-1].cast<double>().topRightCorner(3,1);
-    Eigen::Vector3d curTrans = current_frame->pose.matrix().topRightCorner(3,1);
-    log_string += "   Translational Diff: " + std::to_string((gtTrans-tmpTrans).norm()) + "\n";
-    log_string += "            after icp: " + std::to_string((gtTrans-curTrans).norm());
-    log_string += "    icp (Depth+Centroid) loss is " + std::to_string(loss) + "\n";
-#endif
-        }
-        
-        std::cout << "STEP 4: Prepare for next tracking." << std::endl;
-        if(b_recovered && valid_pose){
-            // // TEST the result without depth-centroid icp
-            // recovered_id = 0; 
-            // std::cout << "---- Best id: " << recovered_id << " out of " << vtmp_pose_candidates.size() << std::endl;
-            // std::cout << vtmp_pose_candidates[0] << std::endl;
-            // std::cout << vtmp_pose_candidates[1] << std::endl;
-            // //////////////////////////////////////////////////
-
-            // update current frame with best pose
-            current_frame->pose = Sophus::SE3d( vtmp_pose_candidates[recovered_id] );
-            RgbdFramePtr current_frame_copy = std::make_shared<RgbdFrame>();
-            current_frame->copyTo(current_frame_copy);
-            // upadate reference frame with 
-            odometry->relocUpdate(current_frame_copy);
-            auto reference_image = odometry->get_reference_image(renderIdx);
-            auto reference_frame = reference_image->get_reference_frame();    
-            // raycast again for next tracking
-            manager->active_submaps[renderIdx]->check_visibility(reference_image);
-            manager->active_submaps[renderIdx]->raycast(reference_image->get_vmap(), reference_image->get_nmap(0), reference_frame->pose);
-            reference_image->resize_device_map();
-
-            // set to false in visualization mode
-            b_reloc_attp = true;
-            // b_reloc_attp = false;
-            odometry->trackingLost = false;
-            
-            // store the relocalized frame as a new KeyFrame
-            current_keyframe = current_frame;
-            hasNewKeyFrame = true;
-#ifdef LOG
-    log_string += "Relocalization SUCCEEDED (with " + std::to_string(recovered_id) + ")\n\n";
-#endif
-            // std::cout << "Relocalization SUCCEEDED (with " + std::to_string(recovered_id) + ")" << std::endl;
-        }
-        else
-        {
-            // // TEST the result without depth-centroid icp
-            // best_loss_id = 0; 
-            // std::cout << "---- Best id: " << best_loss_id << " out of " << vtmp_pose_candidates.size() << std::endl;
-            // std::cout << vtmp_pose_candidates[0] << std::endl;
-            // std::cout << vtmp_pose_candidates[1] << std::endl;
-            // //////////////////////////////////////////////////
-
-            // set to true in visualization mode
-            b_reloc_attp = false;
-            // b_reloc_attp = true;
-
-            // double check if the candidate is a valid orthogonal matrix
-            Eigen::Matrix3d tmpR = vtmp_pose_candidates[best_loss_id].topLeftCorner<3, 3>();
-            if( (tmpR*tmpR.transpose()).isIdentity(1e-3) )
-                current_frame->pose = Sophus::SE3d( vtmp_pose_candidates[best_loss_id] );
-            else
-                current_frame->pose = Sophus::SE3d(Eigen::Matrix4d::Identity());
-            
-            odometry->trackingLost = true;
-            hasNewKeyFrame = false;
-
-#ifdef LOG
-    log_string += "Relocalization FAILED (with " + std::to_string(best_loss_id) + "\n\n";
-#endif
-            // std::cout << "Relocalization FAILED (with " + std::to_string(best_loss_id) + "/1)\n";
-        }
-    } // if enough correspondences
-
-#ifdef LOG
-    // log detailed relocalization information
-    std::string name_log = "/home/yohann/SLAMs/object-guided-relocalisation/"+output_file_name+"_log.txt";
-    std::ofstream log_file;
-    log_file.open(name_log, std::ios::app);
-    if(log_file.is_open())
-    {
-        log_file << log_string;
-    }
-    else
-    {
-        std::cout << "!!!!ERROR: Unable to open the pose file." << std::endl;
-    }
-    log_file.close();
-#endif
-    
-    // // store the recovered pose
-    // Eigen::Matrix4d tmp_p = current_frame->pose.matrix();
-    // Eigen::Matrix3d rot = tmp_p.topLeftCorner<3,3>();
-    // Eigen::Vector3d trans = tmp_p.topRightCorner<3,1>();
-    // Eigen::Quaterniond quat(rot);
-    // std::string name_pose = "/home/yohann/SLAMs/object-guided-relocalisation/pose_info/CENT/"+output_file_name+".txt";
-    // std::ofstream pose_file;
-    // pose_file.open(name_pose, std::ios::app);
-    // if(pose_file.is_open())
-    // {
-    //     pose_file << current_frame->id << " " 
-    //             << trans(0) << " " << trans(1) << " " << trans(2) << " "
-    //             << quat.x() << " " << quat.y() << " " << quat.z() << " " << quat.w()
-    //             << "\n";
-    // }
-    // else
-    // {
-    //     std::cout << "!!!!ERROR: Unable to open the pose file." << std::endl;
-    // }
-    // pose_file.close();
-
-    // // // Test with visual
-    // // Eigen::Vector3d gtTrans = vGTposes[reloc_frame_id-1].cast<double>().topRightCorner(3,1);
-    // // if((gtTrans-trans).norm() > 0.05){
-    // //     pause_window = true;
-    // // } else {
-    // //     pause_window = false;
-    // // }
-
-    
-    std::cout << "#### Relocalization process takes "
-                << ( std::clock() - start ) / (double) CLOCKS_PER_SEC 
-                << " seconds; " << std::endl;
 }
 
 cv::Mat System::get_shaded_depth()

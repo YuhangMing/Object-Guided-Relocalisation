@@ -27,6 +27,7 @@ public:
     // main process function
     void process_images(const cv::Mat depth, const cv::Mat image, 
                         bool bSubmapping, bool bSemantic, bool bRecordSequence);
+    void relocalization();
     
     // system controls
     void change_colour_mode(int colour_mode = 0);
@@ -52,7 +53,6 @@ public:
     // pure relocalization
     void set_frame_id(size_t sid);
     void relocalize_image(const cv::Mat depth, const cv::Mat image, const fusion::IntrinsicMatrix base);
-    void relocalization();
 
     // get rendered ray tracing map
     cv::Mat get_shaded_depth();
@@ -120,6 +120,7 @@ private:
     // Core modules
     std::shared_ptr<SubmapManager> manager;
     std::shared_ptr<DenseOdometry> odometry;
+    std::shared_ptr<Relocalizer> relocalizer;
     RgbdFramePtr current_frame, current_keyframe;
 
     size_t frame_id;
@@ -148,12 +149,6 @@ private:
     // cv::cuda::GpuMat device_nmap_cast;
 
     // std::vector<Sophus::SE3d> gt_pose;
-
-    /* Reloc disabled for now.
-    std::shared_ptr<Relocalizer> relocalizer;
-        */
-
-    
 };
 
 } // namespace fusion

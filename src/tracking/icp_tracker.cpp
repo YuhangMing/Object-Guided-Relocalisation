@@ -170,104 +170,6 @@ TrackingResult DenseTracking::compute_transform(const RgbdImagePtr reference, co
   return result;
 }
 
-/* Semantic & Reloc disabled for now.
-
-TrackingResult DenseTracking::compute_transform_depth_only(const RgbdImagePtr reference, const RgbdImagePtr current, const TrackingContext &c)
-{
-  Revertable<Sophus::SE3d> estimate = Revertable<Sophus::SE3d>(Sophus::SE3d());
-
-  if (c.use_initial_guess_)
-    estimate = Revertable<Sophus::SE3d>(c.initial_estimate_);
-
-  bool invalid_error = false;
-  Sophus::SE3d init_estimate = estimate.get();
-  float final_icp_error = 0;
-
-  for (int level = c.max_iterations_.size() - 1; level >= 0; --level)
-  {
-    cv::cuda::GpuMat curr_vmap = current->get_vmap(level);
-    cv::cuda::GpuMat last_vmap = reference->get_vmap(level);
-    cv::cuda::GpuMat curr_nmap = current->get_nmap(level);
-    cv::cuda::GpuMat last_nmap = reference->get_nmap(level);
-    IntrinsicMatrix K = c.intrinsics_pyr_[level];
-    float icp_error = std::numeric_limits<float>::max();
-    int icp_count = 0;
-    float stddev_estimated = 0;
-
-    for (int iter = 0; iter < c.max_iterations_[level]; ++iter)
-    {
-      auto last_estimate = estimate.get();
-      auto last_icp_error = icp_error;
-
-      icp_reduce(
-          curr_vmap,
-          curr_nmap,
-          last_vmap,
-          last_nmap,
-          SUM_SE3,
-          OUT_SE3,
-          last_estimate,
-          K,
-          icp_hessian.data(),
-          icp_residual.data(),
-          residual_icp_.data());
-
-      update = icp_hessian.cast<double>().ldlt().solve(icp_residual.cast<double>());
-      estimate = Sophus::SE3d::exp(update) * last_estimate;
-
-      icp_error = sqrt(residual_icp_(0)) / residual_icp_(1);
-
-      // std::cout << "-- icp error: " << residual_icp_(0) << " - "
-      //           << residual_icp_(1) << " - " << icp_error
-      //           << std::endl;
-
-      if (std::isnan(icp_error))
-      {
-        std::cout << "!! Invalid icp error at level-" << level 
-                  << ", iter-" << iter << std::endl;
-        invalid_error = true;
-        break;
-      }
-
-      if (icp_error > last_icp_error)
-      {
-        if (icp_count >= 2)
-        {
-          estimate.revert();
-          break;
-        }
-
-        icp_count++;
-        icp_error = last_icp_error;
-        final_icp_error = icp_error;
-      }
-      else
-      {
-        icp_count = 0;
-      }
-
-    }
-  }
-
-  TrackingResult result;
-
-  // if (invalid_error || (estimate.get().inverse() * init_estimate).log().norm() > 0.2)
-  if (invalid_error)
-  
-  {
-    result.sucess = false;
-    result.icp_error =  std::numeric_limits<float>::max();
-  }
-  else
-  {
-    result.sucess = true;
-    result.icp_error = final_icp_error;
-    result.update = estimate.get().inverse();
-  }
-
-  return result;
-}
-
 TrackingResult DenseTracking::compute_transform_depth_centroids(const RgbdImagePtr reference, const RgbdImagePtr current, const TrackingContext &c)
 {
   Revertable<Sophus::SE3d> estimate = Revertable<Sophus::SE3d>(Sophus::SE3d());
@@ -284,13 +186,24 @@ TrackingResult DenseTracking::compute_transform_depth_centroids(const RgbdImageP
 
   cv::Mat curr_cent = current->get_centroids();
   cv::Mat last_cent = reference->get_centroids();
+  // // TEST: display centroid 
+  // for(size_t i=0; i<30; ++i)
+  // {
+  //   std::cout << "Label " << i%6+1 << " map (" << last_cent.at<float>(i, 0)
+  //             << ", " << last_cent.at<float>(i, 1)
+  //             << ", " << last_cent.at<float>(i, 2) 
+  //             << "); frame (" << curr_cent.at<float>(i, 0)
+  //             << ", " << curr_cent.at<float>(i, 1)
+  //             << ", " << curr_cent.at<float>(i, 2) << ")" << std::endl;
+  // }
+
   for (int level = c.max_iterations_.size() - 1; level >= 0; --level)
   {
     cv::cuda::GpuMat curr_vmap = current->get_vmap(level);
     cv::cuda::GpuMat last_vmap = reference->get_vmap(level);
     cv::cuda::GpuMat curr_nmap = current->get_nmap(level);
     cv::cuda::GpuMat last_nmap = reference->get_nmap(level);
-    IntrinsicMatrix K = c.intrinsics_pyr_[level];
+    Eigen::Matrix3f K = c.K_pyr_[level];
     float icp_error = std::numeric_limits<float>::max();
     float cent_error = std::numeric_limits<float>::max();
     float total_error = std::numeric_limits<float>::max();
@@ -461,8 +374,106 @@ void DenseTracking::cent_reduce(const cv::Mat &curr_cent, const cv::Mat &last_ce
   residual[0] = sum[27];
   residual[1] = sum[28];
 }
+
+/* Semantic & Reloc disabled for now.
+TrackingResult DenseTracking::compute_transform_depth_only(const RgbdImagePtr reference, const RgbdImagePtr current, const TrackingContext &c)
+{
+  Revertable<Sophus::SE3d> estimate = Revertable<Sophus::SE3d>(Sophus::SE3d());
+
+  if (c.use_initial_guess_)
+    estimate = Revertable<Sophus::SE3d>(c.initial_estimate_);
+
+  bool invalid_error = false;
+  Sophus::SE3d init_estimate = estimate.get();
+  float final_icp_error = 0;
+
+  for (int level = c.max_iterations_.size() - 1; level >= 0; --level)
+  {
+    cv::cuda::GpuMat curr_vmap = current->get_vmap(level);
+    cv::cuda::GpuMat last_vmap = reference->get_vmap(level);
+    cv::cuda::GpuMat curr_nmap = current->get_nmap(level);
+    cv::cuda::GpuMat last_nmap = reference->get_nmap(level);
+    IntrinsicMatrix K = c.intrinsics_pyr_[level];
+    float icp_error = std::numeric_limits<float>::max();
+    int icp_count = 0;
+    float stddev_estimated = 0;
+
+    for (int iter = 0; iter < c.max_iterations_[level]; ++iter)
+    {
+      auto last_estimate = estimate.get();
+      auto last_icp_error = icp_error;
+
+      icp_reduce(
+          curr_vmap,
+          curr_nmap,
+          last_vmap,
+          last_nmap,
+          SUM_SE3,
+          OUT_SE3,
+          last_estimate,
+          K,
+          icp_hessian.data(),
+          icp_residual.data(),
+          residual_icp_.data());
+
+      update = icp_hessian.cast<double>().ldlt().solve(icp_residual.cast<double>());
+      estimate = Sophus::SE3d::exp(update) * last_estimate;
+
+      icp_error = sqrt(residual_icp_(0)) / residual_icp_(1);
+
+      // std::cout << "-- icp error: " << residual_icp_(0) << " - "
+      //           << residual_icp_(1) << " - " << icp_error
+      //           << std::endl;
+
+      if (std::isnan(icp_error))
+      {
+        std::cout << "!! Invalid icp error at level-" << level 
+                  << ", iter-" << iter << std::endl;
+        invalid_error = true;
+        break;
+      }
+
+      if (icp_error > last_icp_error)
+      {
+        if (icp_count >= 2)
+        {
+          estimate.revert();
+          break;
+        }
+
+        icp_count++;
+        icp_error = last_icp_error;
+        final_icp_error = icp_error;
+      }
+      else
+      {
+        icp_count = 0;
+      }
+
+    }
+  }
+
+  TrackingResult result;
+
+  // if (invalid_error || (estimate.get().inverse() * init_estimate).log().norm() > 0.2)
+  if (invalid_error)
+  
+  {
+    result.sucess = false;
+    result.icp_error =  std::numeric_limits<float>::max();
+  }
+  else
+  {
+    result.sucess = true;
+    result.icp_error = final_icp_error;
+    result.update = estimate.get().inverse();
+  }
+
+  return result;
+}
 */
 
+/* Attepmt to not use device image in tracking. Result in noisy reconstruction.
 void DenseTracking::set_source_image(cv::Mat img, const int num_pyr)
 {
   cv::cuda::GpuMat image_float, intensity_float;
@@ -780,6 +791,7 @@ cv::cuda::GpuMat DenseTracking::get_nmap_ref(const int &level)
 {
   return nmap_ref_pyr[level];
 }
+*/
 
 
 } // namespace fusion

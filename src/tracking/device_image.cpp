@@ -213,6 +213,8 @@ cv::Mat DeviceImage::get_centroids() const
 
 void DeviceImage::upload(const std::shared_ptr<RgbdFrame> frame)
 {
+    cent_float_cpu = frame->cent_matrix.clone();
+
     if (frame == reference_frame){
         std::cout << "this frame already uploaded" << std::endl;
         return;
@@ -249,10 +251,6 @@ void DeviceImage::upload(const std::shared_ptr<RgbdFrame> frame)
     }
 
     reference_frame = frame;
-
-    cent_float_cpu = frame->cent_matrix.clone();
-    // this->cent_float.upload(cent_float_cpu);
-
 
     // // !!!!! COMMENT this line out later
     // renderScene(vmap_pyr[0], nmap_pyr[0], rendered_image_raw);

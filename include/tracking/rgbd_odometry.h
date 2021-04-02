@@ -24,8 +24,8 @@ public:
 
   bool trackingLost;
   void trackFrame(std::shared_ptr<RgbdFrame> frame);
+  void trackDepthAndCentroid(std::shared_ptr<RgbdFrame> frame, float& icp_error);
   // void trackDepthOnly(std::shared_ptr<RgbdFrame> frame, float& icp_error);
-  // void trackDepthAndCentroid(std::shared_ptr<RgbdFrame> frame, float& icp_error);
   void reset();
   void relocUpdate(std::shared_ptr<RgbdFrame> frame);
 
@@ -34,15 +34,9 @@ public:
 
   std::vector<Sophus::SE3d> get_keyframe_poses() const;
   std::vector<Sophus::SE3d> get_camera_trajectory() const;
-
   // Eigen::Matrix4f get_current_pose_matrix() const;
   std::shared_ptr<DeviceImage> get_current_image() const;
   std::shared_ptr<DeviceImage> get_reference_image(int i) const;
-  cv::cuda::GpuMat get_current_color();
-  cv::cuda::GpuMat get_current_depth();
-  cv::cuda::GpuMat get_current_vmap(const int &level = 0);
-  cv::cuda::GpuMat get_current_nmap(const int &level = 0);
-  void update_reference_model(cv::cuda::GpuMat vmap);
   
   // submap related
   void SetManager(std::shared_ptr<SubmapManager> pManager);
@@ -54,6 +48,14 @@ public:
 
   // // semantic related
   // void SetDetector(semantic::MaskRCNN * pDetector);
+
+  /* Attepmt to not use device image in tracking. Result in noisy reconstruction.
+  cv::cuda::GpuMat get_current_color();
+  cv::cuda::GpuMat get_current_depth();
+  cv::cuda::GpuMat get_current_vmap(const int &level = 0);
+  cv::cuda::GpuMat get_current_nmap(const int &level = 0);
+  void update_reference_model(cv::cuda::GpuMat vmap);
+  */
 
 private:
   std::vector<Eigen::Matrix3f> vK, vKInv;
