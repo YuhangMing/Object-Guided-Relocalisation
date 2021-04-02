@@ -18,8 +18,6 @@
 //         ;
 
 typedef Sophus::SE3d PoseType;
-// typedef Eigen::Vector<float, 132> LocalFeatType;
-// typedef Eigen::Vector<float, 256> GlobalFeatType;
 
 // Debug
 struct Config
@@ -29,13 +27,11 @@ struct Config
     bool bSemantic = true;
     bool bRecord = false;
     bool bLoadDiskMap = false;
+    bool bPureRelocalisation = false;
     
-    std::string data_folder = "/home/yohann/SLAMs/datasets/BOR/";
-    // consider directly load all filenames in the directly
-    // and remove the dependency on this array
-    int num_img[10] = {3522, 1237, 887, 1221, 809, 1141, 919, 1470, 501, 870};
+    std::string data_path = "/home/yohann/SLAMs/datasets/BOR/";
     std::string map_file = "map";
-    int mapSize = 4;
+    int mapSize = 1;
 
     int mCurrentFrameId = 0;
     bool mbEnableDebugLogs = false;

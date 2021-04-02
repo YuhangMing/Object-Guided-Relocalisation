@@ -166,6 +166,11 @@ std::vector<std::pair<int, std::vector<float>>> SubmapManager::GetObjects(bool b
 	return label_dim_pair;
 }
 
+int SubmapManager::GetNumObjs() const
+{
+	return vObjectMaps[renderIdx]->v_objects.size();
+}
+
 
 void SubmapManager::writeMapToDisk()
 {
@@ -258,7 +263,7 @@ void SubmapManager::readMapFromDisk()
 		std::cout << "Reading the object maps:" << std::endl;
 		// ONLY READ mapi_0 for now, update later
 		std::string file_name = GlobalCfg.map_file + "_" + std::to_string(0);
-		std::cout << " " << file_name << std::endl;
+		std::cout << " " << file_name << "_XXX.txt" << std::endl;
 		if(vObjectMaps.size() > 0){
 			vObjectMaps[0]->readObjectsFromDisk(file_name);
 		}else{

@@ -26,7 +26,10 @@ public:
     
     // main process function
     void process_images(const cv::Mat depth, const cv::Mat image, 
-                        bool bSubmapping, bool bSemantic, bool bRecordSequence);
+                        bool bSemantic, bool bSubmapping, bool bRecordSequence);
+    void relocalize_image(const cv::Mat depth, const cv::Mat image, 
+                          bool bSemantic);
+
     void relocalization();
     
     // system controls
@@ -52,8 +55,7 @@ public:
     /* Semantic & Reloc disabled for now.
     // pure relocalization
     void set_frame_id(size_t sid);
-    void relocalize_image(const cv::Mat depth, const cv::Mat image, const fusion::IntrinsicMatrix base);
-
+    
     // get rendered ray tracing map
     cv::Mat get_shaded_depth();
     cv::Mat get_rendered_scene() const;
@@ -112,9 +114,8 @@ public:
     std::vector<Eigen::Matrix4f> getMaskRCNNResults() const;
     */
    
-   // NOT USED CURRENTLY
    mutable bool b_reloc_attp;
-   int reloc_frame_id;
+//    int reloc_frame_id;
 
 private:
     // Core modules
@@ -137,9 +138,8 @@ private:
     void extract_semantics(RgbdFramePtr frame, bool bGeoSeg, float lamb, float tao, int win_size, int thre);
 
 
-    // NOT USED CURRENTLY
     // size_t sequence_id;
-    size_t frame_start_reloc_id;
+    // size_t frame_start_reloc_id;
     bool hasNewKeyFrame;
     int renderIdx;
 

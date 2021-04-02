@@ -292,7 +292,7 @@ void ObjectMap::readObjectsFromDisk(std::string file_name)
     std::string sNumObj;
     std::getline(objectfile, sNumObj);
     numObj = std::stoi(sNumObj);
-    std::cout << sNumObj + " objects in the map." << std::endl;
+    // std::cout << "   " << sNumObj << " objects in the map." << std::endl;
   }
   objectfile.close();
   v_objects.clear();
@@ -303,7 +303,7 @@ void ObjectMap::readObjectsFromDisk(std::string file_name)
     v_objects.push_back(std::move(new_object));
     // start_line ++;
   }
-  std::cout << "Primary objects list loaded." << std::endl;
+  std::cout << " - Primary objects list loaded." << std::endl;
   // create back up dic from loaded objects
   object_dictionary.clear();
   for(size_t i=0; i<numObj; ++i){
@@ -317,13 +317,13 @@ void ObjectMap::readObjectsFromDisk(std::string file_name)
       search->second.push_back(std::move(one_object));
     }
   } // -i 
-  std::cout << "Backup objects dictionary loaded." << std::endl;
+  std::cout << " - Backup objects dictionary loaded." << std::endl;
   // TEST
   // display observation counts for each instance
   std::map<int, std::vector<std::shared_ptr<Object3d>>>::iterator it;
   for(it=object_dictionary.begin(); it!=object_dictionary.end(); ++it)
   {
-    std::cout << "Object " << it->first << " has " 
+    std::cout << " - Object " << it->first << " has " 
               << it->second.size() << " instances detected: ";
     for(size_t i=0; i<it->second.size(); ++i)
     {
@@ -335,6 +335,8 @@ void ObjectMap::readObjectsFromDisk(std::string file_name)
     } 
     std::cout << std::endl;
   }
+  if(numObj > 0)
+    std::cout << " - SUCCESS: objects read from disk." << std::endl;
 
   // keyframes
   std::ifstream kfsfile(file_name+"_keyframes.txt");
@@ -366,6 +368,7 @@ void ObjectMap::readObjectsFromDisk(std::string file_name)
       T.topRightCorner(3,1) = t;
       vKFs.push_back(T);
     }
+    std::cout << " - SUCCESS: keyframes read from disk." << std::endl;
   }
   kfsfile.close();
 }

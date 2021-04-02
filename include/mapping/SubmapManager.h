@@ -31,6 +31,7 @@ public:
 	std::vector<MapStruct *> getDenseMaps();
 	std::vector<Eigen::Matrix<float, 4, 4>> GetKFPoses();
 	std::vector<std::pair<int, std::vector<float>>> GetObjects(bool bMain);
+	int GetNumObjs() const;
 	
 	void writeMapToDisk();
 	void readMapFromDisk();

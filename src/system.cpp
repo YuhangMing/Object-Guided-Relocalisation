@@ -25,8 +25,9 @@ System::~System()
 }
 
 System::System(bool bSemantic, bool bLoadDiskMap)
-    : frame_id(0), reloc_frame_id(0), frame_start_reloc_id(0), 
-    is_initialized(false), hasNewKeyFrame(false), b_reloc_attp(false)
+    : frame_id(0), is_initialized(false), 
+    hasNewKeyFrame(false), b_reloc_attp(false)
+    // , reloc_frame_id(0), frame_start_reloc_id(0)
 {
     safe_call(cudaGetLastError());
     odometry = std::make_shared<DenseOdometry>();
@@ -160,14 +161,14 @@ void System::initialization()
 }
 
 void System::process_images(const cv::Mat depth, const cv::Mat image, 
-                            bool bSubmapping, bool bSemantic, bool bRecordSequence)
+                            bool bSemantic, bool bSubmapping, bool bRecordSequence)
 {
     cv::Mat depth_float;
     depth.convertTo(depth_float, CV_32FC1, 1 / 1000.f);
-    float max_perct = 0.;
-    int max_perct_idx = -1;
-    float thres_new_sm = 0.50;
-    float thres_passive = 0.20;
+    // float max_perct = 0.;
+    // int max_perct_idx = -1;
+    // float thres_new_sm = 0.50;
+    // float thres_passive = 0.20;
     renderIdx = manager->renderIdx;
 
     // if (bRecordSequence)
@@ -247,23 +248,20 @@ void System::process_images(const cv::Mat depth, const cv::Mat image,
             // odometry->update_reference_model(cuVMap); // update vmap & nmap in tracker
             */
 
+            cv::cuda::GpuMat cuDepth, cuVMap; 
             auto current_image = odometry->get_current_image();
             auto current_frame = current_image->get_reference_frame();
-            
-            cv::cuda::GpuMat cuDepth, cuVMap; 
             current_image->get_raw_depth().copyTo(cuDepth);
-            current_image->get_vmap().copyTo(cuVMap);
             Sophus::SE3d Tcm = current_frame->pose; // transformation from camera to map
+            // current_image->get_vmap().copyTo(cuVMap);
             // std::cout << Tcm.matrix() << std::endl;
             
-            // update the map
             // std::cout << "- Map Fusing." << std::endl;
             manager->vActiveSubmaps[i]->Fuse(cuDepth, Tcm);
 
             // std::cout << "- Raytracing." << std::endl;
             manager->vActiveSubmaps[i]->RayTrace(Tcm);
-            cuVMap = manager->vActiveSubmaps[i]->GetRayTracingResult();
-            
+            cuVMap = manager->vActiveSubmaps[i]->GetRayTracingResult();            
             auto reference_image = odometry->get_reference_image(i);
             reference_image->resize_device_map(cuVMap); 
             // cv::Mat test_raycasted_vmap;
@@ -360,7 +358,7 @@ void System::process_images(const cv::Mat depth, const cv::Mat image,
             std::cout << "\n !!!! Tracking Lost at frame " << frame_id << "! Trying to recover..." << std::endl;
             if(!bSemantic)
                 return;
-            reloc_frame_id++;
+            // reloc_frame_id++;
             relocalization();
             manager->AddKeyFrame(current_keyframe->pose.matrix().cast<float>());
         }
@@ -449,6 +447,34 @@ void System::process_images(const cv::Mat depth, const cv::Mat image,
     // std::cout << "FINISHED current frame.\n" << std::endl;
 }
 
+void System::relocalize_image(const cv::Mat depth, const cv::Mat image, bool bSemantic)
+{
+    if(!bSemantic){
+        std::cout << "!!! Cannot perform relocalisation without semantic detection." << std::endl;
+        return;
+    }
+    if(manager->GetNumObjs() <= 0)
+    {
+        std::cout << "!!! Object-enriched map must be constructed/loaded beforehand." << std::endl;
+        return;
+    }
+
+    std::cout << "\n#### Relocalising frame " << frame_id << "..." << std::endl;
+    
+    renderIdx = manager->renderIdx;
+    odometry->setSubmapIdx(renderIdx);
+    
+    cv::Mat depth_float;
+    depth.convertTo(depth_float, CV_32FC1, 1 / 1000.f);
+    current_frame = std::make_shared<RgbdFrame>(depth_float, image, frame_id, 0);
+
+    relocalization();
+    frame_id += 1;
+
+    // reloc_frame_id++;
+    // reloc_frame_id = frame_id - frame_start_reloc_id;
+}
+
 void System::relocalization()
 {
 
@@ -468,11 +494,10 @@ void System::relocalization()
 #endif
     
     //-step 2: solve the absolute orientation (AO) problem (centroid of box and corresponding cuboid)
-    std::cout << "STEP 2: Object based relocalisation." << std::endl;
+    std::cout << "STEP 2: Object guiding." << std::endl;
     bool b_recovered = false, 
          b_enough_corresp = false;
     std::vector<std::vector<std::pair<int, std::pair<int, int>>>> vv_inlier_pairs;
-    // std::vector<std::vector<std::pair<int, int>>> vv_best_map_cub_labidx;
     std::vector<Eigen::Matrix4d> vtmp_pose_candidates = relocalizer->object_data_association(
                                     current_frame->vObjects, 
                                     manager->vObjectMaps[renderIdx]->v_objects,
@@ -489,7 +514,7 @@ void System::relocalization()
     else
     {
     //-step 3: use the pose from prob AO as the candidate for icp optimization
-        std::cout << "STEP 3: Use icp to validate pose candidates." << std::endl;
+        std::cout << "STEP 3: Depth-Centroid icp optimisation & validation." << std::endl;
         float loss;
         float best_loss = std::numeric_limits<float>::max();
         int recovered_id = -1,
@@ -569,16 +594,9 @@ void System::relocalization()
     log_string += "    icp (Depth+Centroid) loss is " + std::to_string(loss) + "\n";
 #endif
         }
-        
+    //-step 4: prepare for next tracking    
         std::cout << "STEP 4: Prepare for next tracking." << std::endl;
         if(b_recovered && valid_pose){
-            // // TEST the result without depth-centroid icp
-            // recovered_id = 0; 
-            // std::cout << "---- Best id: " << recovered_id << " out of " << vtmp_pose_candidates.size() << std::endl;
-            // std::cout << vtmp_pose_candidates[0] << std::endl;
-            // std::cout << vtmp_pose_candidates[1] << std::endl;
-            // //////////////////////////////////////////////////
-
             // update current frame with best pose
             current_frame->pose = Sophus::SE3d( vtmp_pose_candidates[recovered_id] );            
             // raycast again for next tracking
@@ -602,13 +620,6 @@ void System::relocalization()
         }
         else
         {
-            // // TEST the result without depth-centroid icp
-            // best_loss_id = 0; 
-            // std::cout << "---- Best id: " << best_loss_id << " out of " << vtmp_pose_candidates.size() << std::endl;
-            // std::cout << vtmp_pose_candidates[0] << std::endl;
-            // std::cout << vtmp_pose_candidates[1] << std::endl;
-            // //////////////////////////////////////////////////
-
             // set to true in visualization mode
             b_reloc_attp = false;
             // b_reloc_attp = true;
@@ -675,7 +686,6 @@ void System::relocalization()
     // //     pause_window = false;
     // // }
 
-    
     std::cout << "#### Relocalization process takes "
                 << ( std::clock() - start ) / (double) CLOCKS_PER_SEC 
                 << " seconds; " << std::endl;
@@ -847,87 +857,6 @@ std::vector<Eigen::Matrix4d> System::readMapPoses()
 // }
 
 /* Semantic & Reloc diasbled for now
-void System::relocalize_image(const cv::Mat depth, const cv::Mat image, const fusion::IntrinsicMatrix base)
-{
-    cv::Mat depth_float;
-    depth.convertTo(depth_float, CV_32FC1, 1 / 1000.f);
-    float max_perct = 0.;
-    int max_perct_idx = -1;
-    float thres_new_sm = 0.50;
-    float thres_passive = 0.20;
-    renderIdx = manager->renderIdx;
-
-    // std::cout << "Frame #" << frame_id << std::endl;
-    // In tracking and Mapping, loop through all active submaps
-    odometry->setSubmapIdx(renderIdx);
-    // new frame for every submap
-    current_frame = std::make_shared<RgbdFrame>(depth_float, image, frame_id, 0);
-
-    // INITIALIZATION 
-    if (!is_initialized)
-        initialization();
-
-    // TRACKING
-    // track the first frame to initialize, and load map and reloc
-    if(frame_id > frame_start_reloc_id)
-        odometry->trackingLost = true;
-    if (!odometry->trackingLost){
-        b_reloc_attp = false;
-        // update pose of current_frame and reference_frame in corresponding DeviceImage
-        odometry->trackFrame(current_frame);
-        if(keyframe_needed() && !odometry->trackingLost)
-        {
-            create_keyframe();
-        }
-    }
-
-    // RENDERING
-    if (!odometry->trackingLost)
-    {
-        auto reference_image = odometry->get_reference_image(renderIdx);
-        auto reference_frame = reference_image->get_reference_frame();
-
-        if(manager->active_submaps[renderIdx]->bRender){
-            // update the map
-            manager->active_submaps[renderIdx]->update(reference_image);
-            manager->active_submaps[renderIdx]->raycast(reference_image->get_vmap(), reference_image->get_nmap(0), reference_frame->pose);
-            reference_image->resize_device_map();
-            // add new keyframe in the map & calculate cuboids for objects detected
-            if(hasNewKeyFrame){
-                // nocsdetector->performDetection(image);
-                manager->AddKeyFrame(current_keyframe);
-                reference_image->downloadVNM(odometry->vModelFrames[renderIdx], false);
-                // perform semantic analysis on keyframe
-                extract_semantics(odometry->vModelFrames[renderIdx], false, 1, 0.002, 5, 7);
-
-                if(current_keyframe->numDetection > 0){
-                    manager->active_submaps[renderIdx]->update_objects(odometry->vModelFrames[renderIdx]);
-                    manager->active_submaps[renderIdx]->color_objects(reference_image);
-                    manager->active_submaps[renderIdx]->raycast(reference_image->get_vmap(), reference_image->get_nmap(0), reference_image->get_object_mask(), reference_frame->pose);
-                }
-            }
-        } 
-        // set current map idx to trackIdx in the odometry
-        odometry->setTrackIdx(renderIdx);
-    }
-    
-    // RELOCALIZATION
-    else
-    {
-        reloc_frame_id = frame_id - frame_start_reloc_id;
-        std::cout << "Tracking Lost at frame " << frame_id << "/" << reloc_frame_id << "! Trying to recover..." << std::endl;
-        relocalization();
-    }
-
-    if (hasNewKeyFrame)
-    {
-        hasNewKeyFrame = false;
-    }
-
-    frame_id += 1;
-    // frame_id += 111;
-}
-
 cv::Mat System::get_shaded_depth()
 {
     if (odometry->get_current_image())
