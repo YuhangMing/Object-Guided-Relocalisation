@@ -1,14 +1,10 @@
 #include "system.h"
-
 #include "cuda_runtime.h"
 #include <ctime>
 #include <iostream>
 #include <fstream>
 #include <unistd.h>
 #include <string>
-
-#include "tracking/device_image.h"
-#include "utils/safe_call.h"
 
 // #define CUDA_MEM
 // #define TIMING
@@ -19,18 +15,16 @@ namespace fusion
 
 System::~System()
 {
-    // graph->terminate();
-    // graphThread.join();
     delete detector;
 }
 
-System::System(bool bSemantic, bool bLoadDiskMap)
-    : frame_id(0), is_initialized(false), 
-    hasNewKeyFrame(false), b_reloc_attp(false)
-    // , reloc_frame_id(0), frame_start_reloc_id(0)
+System::System(int id) : is_initialized(false), hasNewKeyFrame(false)
+    // , b_reloc_attp(false), reloc_frame_id(0), frame_start_reloc_id(0)
 {
+    frame_id = id;
     safe_call(cudaGetLastError());
     odometry = std::make_shared<DenseOdometry>();
+    relocalizer = std::make_shared<Relocalizer>();
 
     #ifdef CUDA_MEM
         // inaccurate, the driver decides when to release the memory
@@ -41,7 +35,7 @@ System::System(bool bSemantic, bool bLoadDiskMap)
         free_1 = (uint)free_t0/1048576.0 ;
     #endif
     manager = std::make_shared<SubmapManager>();
-    if(bLoadDiskMap)
+    if(GlobalCfg.bLoadDiskMap)
         manager->readMapFromDisk();
     else
         manager->Create(0, true, true);
@@ -57,11 +51,8 @@ System::System(bool bSemantic, bool bLoadDiskMap)
                 << free_2 << " MB free mem after" << std::endl 
                 << "   out of " << total_0 << " MB total memroy." << std::endl;
     #endif
-
-    // relocalizer = std::make_shared<Relocalizer>(base);
-    relocalizer = std::make_shared<Relocalizer>();
     
-    if(bSemantic){
+    if(GlobalCfg.bSemantic){
     #ifdef CUDA_MEM
         size_t free_t, total_t;
         float free_m1, free_m2, free_m3, total_m, used_m;
@@ -105,8 +96,7 @@ System::System(bool bSemantic, bool bLoadDiskMap)
     // odometry->SetDetector(detector);
     }
 
-    std::cout << "Initialised: SLAM system." << std::endl;
-
+    vFullTrajectory.clear();
     // ??? change later
     // // LOAD SEMANTIC MAPS
     // if(bLoadSMap){
@@ -119,17 +109,11 @@ System::System(bool bSemantic, bool bLoadDiskMap)
 void System::initialization()
 {
     current_frame->pose = initialPose;
-    
-    // /* Semantic & Reloc diasbled for now
-    // set key frame
     current_keyframe = current_frame;
-    // graph->add_keyframe(current_keyframe);
     hasNewKeyFrame = true;
     std::cout << "\n-- KeyFrame needed at frame " << current_frame->id << std::endl; 
-    // */
 
     is_initialized = true;
-
 #ifdef LOG
     // start a new log file
     std::string name_log = "/home/yohann/SLAMs/object-guided-relocalisation/"+output_file_name+"_log.txt";
@@ -145,23 +129,9 @@ void System::initialization()
     }
     log_file.close();
 #endif
-    // // start a new pose file
-    // std::string name_pose = "/home/yohann/SLAMs/object-guided-relocalisation/pose_info/CENT/"+output_file_name+".txt";
-    // std::ofstream pose_file;
-    // pose_file.open(name_pose, std::ios::out);
-    // if(pose_file.is_open())
-    // {
-    //     pose_file << "";
-    // }
-    // else
-    // {
-    //     std::cout << "!!!!ERROR: Unable to open the pose file." << std::endl;
-    // }
-    // pose_file.close();
 }
 
-void System::process_images(const cv::Mat depth, const cv::Mat image, 
-                            bool bSemantic, bool bSubmapping, bool bRecordSequence)
+void System::process_images(const cv::Mat depth, const cv::Mat image)
 {
     cv::Mat depth_float;
     depth.convertTo(depth_float, CV_32FC1, 1 / 1000.f);
@@ -171,7 +141,7 @@ void System::process_images(const cv::Mat depth, const cv::Mat image,
     // float thres_passive = 0.20;
     renderIdx = manager->renderIdx;
 
-    // if (bRecordSequence)
+    // if (GlobalCfg.bRecord)
     // {
     //     std::string dir = "/home/yohann/SLAMs/datasets/sequence/";
     //     // depth
@@ -189,9 +159,6 @@ void System::process_images(const cv::Mat depth, const cv::Mat image,
     for(size_t i=0; i<manager->vActiveSubmaps.size(); ++i)
     {
         odometry->setSubmapIdx(i);
-
-        // NOTE new pointer created here!
-        // new frame for every submap
         current_frame = std::make_shared<RgbdFrame>(depth_float, image, frame_id, 0);
 
         /* INITIALIZATION */ 
@@ -200,7 +167,6 @@ void System::process_images(const cv::Mat depth, const cv::Mat image,
 
         /* TRACKING */
         if (!odometry->trackingLost){
-            b_reloc_attp = false;
             // std::cout << "- Dense Tracking." <<  std::endl;
             // update pose of current_frame and reference_frame in corresponding DeviceImage
             odometry->trackFrame(current_frame);
@@ -270,7 +236,7 @@ void System::process_images(const cv::Mat depth, const cv::Mat image,
             // cv::waitKey(0);
 
             // add new keyframe in the map & calculate cuboids for objects detected
-            if(hasNewKeyFrame && bSemantic){
+            if(hasNewKeyFrame && GlobalCfg.bSemantic){
                 manager->AddKeyFrame(current_keyframe->pose.matrix().cast<float>()); // DO WE NEED THIS?
                 /* Store vertex map from current KF.
                 reference_image->downloadVNM(odometry->vModelFrames[i], false);
@@ -356,7 +322,7 @@ void System::process_images(const cv::Mat depth, const cv::Mat image,
         else
         {
             std::cout << "\n !!!! Tracking Lost at frame " << frame_id << "! Trying to recover..." << std::endl;
-            if(!bSemantic)
+            if(!GlobalCfg.bSemantic)
                 return;
             // reloc_frame_id++;
             relocalization();
@@ -410,46 +376,15 @@ void System::process_images(const cv::Mat depth, const cv::Mat image,
     //     }
     // }
 
-    /* OPTIMIZATION */
-    if (hasNewKeyFrame)
-    {
-        hasNewKeyFrame = false;
-    }
-
-    // if (bRecordSequence)
-    // {
-    //     std::string dir = "/home/yohann/SLAMs/datasets/sequence/";
-    //     // pose
-    //     auto pose = odometry->vModelFrames[renderIdx]->pose.cast<float>().matrix();
-    //     Eigen::Matrix3f rot = pose.topLeftCorner<3,3>();
-    //     Eigen::Vector3f trans = pose.topRightCorner<3,1>();
-    //     Eigen::Quaternionf quat(rot);
-    //     // std::cout << rot << std::endl << trans << std::endl;
-    //     // std::cout << quat.x() << ", " << quat.y() << ", " << quat.z() << ", " << quat.w() << std::endl;
-    //     std::string name_pose = dir + "pose.txt";
-    //     std::ofstream pose_file;
-    //     pose_file.open(name_pose, std::ios::app);
-    //     if(pose_file.is_open())
-    //     {
-    //         pose_file << odometry->vModelFrames[renderIdx]->id << " " 
-    //                   << trans(0) << " " << trans(1) << " " << trans(2) << " "
-    //                   << quat.x() << " " << quat.y() << " " << quat.z() << " " << quat.w()
-    //                   << "\n";
-    //     }
-    //     else
-    //     {
-    //         std::cout << "!!!!ERROR: Unable to open the pose file." << std::endl;
-    //     }
-    //     pose_file.close();
-    // }
-
+    if (GlobalCfg.bOutputPose)
+        vFullTrajectory.push_back(current_frame->pose.cast<float>().matrix());
     frame_id += 1;
-    // std::cout << "FINISHED current frame.\n" << std::endl;
+    hasNewKeyFrame = false;
 }
 
-void System::relocalize_image(const cv::Mat depth, const cv::Mat image, bool bSemantic)
+void System::relocalize_image(const cv::Mat depth, const cv::Mat image)
 {
-    if(!bSemantic){
+    if(!GlobalCfg.bSemantic){
         std::cout << "!!! Cannot perform relocalisation without semantic detection." << std::endl;
         return;
     }
@@ -469,7 +404,11 @@ void System::relocalize_image(const cv::Mat depth, const cv::Mat image, bool bSe
     current_frame = std::make_shared<RgbdFrame>(depth_float, image, frame_id, 0);
 
     relocalization();
+    
+    if (GlobalCfg.bOutputPose)
+        vFullTrajectory.push_back(current_frame->pose.cast<float>().matrix());
     frame_id += 1;
+    hasNewKeyFrame = false;
 
     // reloc_frame_id++;
     // reloc_frame_id = frame_id - frame_start_reloc_id;
@@ -606,8 +545,6 @@ void System::relocalization()
             reference_image->resize_device_map(cuVMap_final); 
 
             // set to false in visualization mode
-            b_reloc_attp = true;
-            // b_reloc_attp = false;
             odometry->trackingLost = false;
             
             // store the relocalized frame as a new KeyFrame
@@ -620,10 +557,6 @@ void System::relocalization()
         }
         else
         {
-            // set to true in visualization mode
-            b_reloc_attp = false;
-            // b_reloc_attp = true;
-
             // double check if the candidate is a valid orthogonal matrix
             Eigen::Matrix3d tmpR = vtmp_pose_candidates[best_loss_id].topLeftCorner<3, 3>();
             if( (tmpR*tmpR.transpose()).isIdentity(1e-3) )
@@ -656,27 +589,6 @@ void System::relocalization()
     }
     log_file.close();
 #endif
-    
-    // // store the recovered pose
-    // Eigen::Matrix4d tmp_p = current_frame->pose.matrix();
-    // Eigen::Matrix3d rot = tmp_p.topLeftCorner<3,3>();
-    // Eigen::Vector3d trans = tmp_p.topRightCorner<3,1>();
-    // Eigen::Quaterniond quat(rot);
-    // std::string name_pose = "/home/yohann/SLAMs/object-guided-relocalisation/pose_info/CENT/"+output_file_name+".txt";
-    // std::ofstream pose_file;
-    // pose_file.open(name_pose, std::ios::app);
-    // if(pose_file.is_open())
-    // {
-    //     pose_file << current_frame->id << " " 
-    //             << trans(0) << " " << trans(1) << " " << trans(2) << " "
-    //             << quat.x() << " " << quat.y() << " " << quat.z() << " " << quat.w()
-    //             << "\n";
-    // }
-    // else
-    // {
-    //     std::cout << "!!!!ERROR: Unable to open the pose file." << std::endl;
-    // }
-    // pose_file.close();
 
     // // // Test with visual
     // // Eigen::Vector3d gtTrans = vGTposes[reloc_frame_id-1].cast<double>().topRightCorner(3,1);
@@ -709,6 +621,7 @@ void System::restart()
     // initialPose = last_tracked_frame->pose;
     is_initialized = false;
     frame_id = 0;
+    vFullTrajectory.clear();
 
     manager->ResetSubmaps();
     odometry->reset();
@@ -815,6 +728,29 @@ std::vector<std::pair<int, std::vector<float>>> System::get_objects(bool bMain) 
 
 
 // Save & Read Maps
+void System::save_full_trajectory()
+{
+    std::string name_pose = GlobalCfg.output_pose_file;
+    std::ofstream pose_file;
+    pose_file.open(name_pose, std::ios::out);
+    if(pose_file.is_open()) {
+        pose_file << "# tx ty tz qx qy qz qw\n";
+        for(auto pose : vFullTrajectory)
+        {
+            Eigen::Matrix3f rot = pose.topLeftCorner<3,3>();
+            Eigen::Vector3f trans = pose.topRightCorner<3,1>();
+            Eigen::Quaternionf quat(rot);
+            // std::cout << rot << std::endl << trans << std::endl;
+            // std::cout << quat.x() << ", " << quat.y() << ", " << quat.z() << ", " << quat.w() << std::endl;
+            pose_file << trans(0) << " " << trans(1) << " " << trans(2) << " "
+                      << quat.x() << " " << quat.y() << " " << quat.z() << " " << quat.w()
+                      << "\n";
+        }
+    } else {
+        std::cout << "!!!!ERROR: Unable to open the pose file." << std::endl;
+    }
+    pose_file.close();
+}
 void System::save_mesh_to_file(const char *str)
 {
     // SavePLY();

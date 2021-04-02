@@ -23,20 +23,23 @@ typedef Sophus::SE3d PoseType;
 struct Config
 {
     bool bEnableViewer = true;
-    bool bSubmapping = false;
     bool bSemantic = true;
-    bool bRecord = false;
+    bool bSubmapping = false;
     bool bLoadDiskMap = false;
-    bool bPureRelocalisation = false;
+    bool bPureReloc = false;
+    bool bOutputPose = true;
+    bool bRecord = false;
     
     std::string data_path = "/home/yohann/SLAMs/datasets/BOR/";
     std::string map_file = "map";
-    int mapSize = 1;
+    // set to 1 for relocalisation tests
+    // set to 4 for visualising maps registration
+    int mapSize = 1;    
+    std::string output_pose_file = "/home/yohann/SLAMs/Object-Guided-Relocalisation/pose_info/";
 
     int mCurrentFrameId = 0;
     bool mbEnableDebugLogs = false;
     bool mbEnableDebugPlot = false;
-    std::string mStrOutputPath = "";
     bool mbUseGroundTruth = false;
     bool mbEmulateRealTime = false;
     int mbEmulateFrameRate = 30;

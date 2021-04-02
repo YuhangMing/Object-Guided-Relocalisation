@@ -1,6 +1,7 @@
 #include "visualization/main_window.h"
 
 #define ENTER_KEY 13
+#define SPACE_KEY 32
 
 MainWindow::MainWindow(const char *name, size_t width, size_t height, bool bDisplay)
     : mbFlagRestart(false), WindowName(name), mbFlagUpdateMesh(false)
@@ -27,7 +28,6 @@ MainWindow::MainWindow(const char *name, size_t width, size_t height, bool bDisp
 
 MainWindow::~MainWindow()
 {
-    // delete keypoints;
     pangolin::DestroyWindow(WindowName);
     std::cout << "opengl released. " << std::endl;
 }
@@ -52,10 +52,10 @@ void MainWindow::SetupDisplays()
     pangolin::CreatePanel("Menu").SetBounds(0, 1, 0, MenuDividerLeft);
 
     // name of the button, default value, shi fou you xuan ze kuang
+    BtnReadMap = std::make_shared<pangolin::Var<bool>>("Menu.Read Map", false, false);
     BtnReset = std::make_shared<pangolin::Var<bool>>("Menu.RESET", false, false);
     BtnSetLost = std::make_shared<pangolin::Var<bool>>("Menu.Set Lost", false, false);
-    BtnSaveMap = std::make_shared<pangolin::Var<bool>>("Menu.Save Map", false, false);
-    BtnReadMap = std::make_shared<pangolin::Var<bool>>("Menu.Read Map", false, false);
+    BoxPureReloc = std::make_shared<pangolin::Var<bool>>("Menu.Pure Reloc", GlobalCfg.bPureReloc, true);
     BoxPaused = std::make_shared<pangolin::Var<bool>>("Menu.PAUSE", true, true);
     BoxDisplayImage = std::make_shared<pangolin::Var<bool>>("Menu.Color Image", true, true);
     BoxDisplayScene = std::make_shared<pangolin::Var<bool>>("Menu.Depth Image", true, true);
@@ -63,12 +63,12 @@ void MainWindow::SetupDisplays()
     // BoxDisplayDetected = std::make_shared<pangolin::Var<bool>>("Menu.Detected Result", true, true);
     BoxDisplayCamera = std::make_shared<pangolin::Var<bool>>("Menu.Current Camera", true, true);
     BoxDisplayKeyCameras = std::make_shared<pangolin::Var<bool>>("Menu.KeyFrames", false, true);
-
     BoxPrimaryCuboid = std::make_shared<pangolin::Var<bool>>("Menu.Primary Cuboid", true, true);
     BarSwitchCuboid = std::make_shared<pangolin::Var<int>>("Menu.Display Cuboid", 7, 0, 7);
     // display name, current val, min, max;
     // BarSwitchMap = std::make_shared<pangolin::Var<int>>("Menu.Display Map", 1, 0, 2);
     BarSwitchSubmap = std::make_shared<pangolin::Var<int>>("Menu.Submaps", 0, 0, GlobalCfg.mapSize);
+    BtnSaveMap = std::make_shared<pangolin::Var<bool>>("Menu.Save Map", false, false);
     
     /* Semantic disabled for now
     BoxDisplayRelocTrajectory = std::make_shared<pangolin::Var<bool>>("Menu.Reloc Frames", false, true);
@@ -119,12 +119,17 @@ void MainWindow::RegisterKeyCallback()
     pangolin::RegisterKeyPressCallback('R', pangolin::SetVarFunctor<bool>("Menu.RESET", true));
     //! Pause / Resume the system
     pangolin::RegisterKeyPressCallback(ENTER_KEY, pangolin::ToggleVarFunctor("Menu.PAUSE"));
+    //! Set lost
+    pangolin::RegisterKeyPressCallback(SPACE_KEY, pangolin::ToggleVarFunctor("Menu.Set Lost"));
     //! Display keyframes
-    pangolin::RegisterKeyPressCallback('c', pangolin::ToggleVarFunctor("Menu.Display KeyFrame"));
-    pangolin::RegisterKeyPressCallback('C', pangolin::ToggleVarFunctor("Menu.Display KeyFrame"));
-    //! Save Maps
-    pangolin::RegisterKeyPressCallback('s', pangolin::SetVarFunctor<bool>("Menu.Save Map", true));
-    pangolin::RegisterKeyPressCallback('S', pangolin::SetVarFunctor<bool>("Menu.Save Map", true));
+    pangolin::RegisterKeyPressCallback('k', pangolin::ToggleVarFunctor("Menu.Display KeyFrame"));
+    pangolin::RegisterKeyPressCallback('K', pangolin::ToggleVarFunctor("Menu.Display KeyFrame"));
+    //! Display current camera
+    pangolin::RegisterKeyPressCallback('c', pangolin::ToggleVarFunctor("Menu.Current Camera"));
+    pangolin::RegisterKeyPressCallback('C', pangolin::ToggleVarFunctor("Menu.Current Camera"));
+    // //! Save Maps
+    // pangolin::RegisterKeyPressCallback('s', pangolin::SetVarFunctor<bool>("Menu.Save Map", true));
+    // pangolin::RegisterKeyPressCallback('S', pangolin::SetVarFunctor<bool>("Menu.Save Map", true));
     //! Load Maps
     pangolin::RegisterKeyPressCallback('l', pangolin::SetVarFunctor<bool>("Menu.Read Map", true));
     pangolin::RegisterKeyPressCallback('L', pangolin::SetVarFunctor<bool>("Menu.Read Map", true));
@@ -302,18 +307,6 @@ void MainWindow::Render()
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glClearColor(0.f, 0.f, 0.f, 1.f);
 
-    if (pangolin::Pushed(*BtnReset))
-    {
-        slam->restart();
-        // if (IsPaused())
-        //     UpdateMeshWithNormal();
-    }
-
-    if (pangolin::Pushed(*BtnSetLost))
-    {
-        slam->setLost(true);
-    }
-
     if (pangolin::Pushed(*BtnSaveMap))
     {
         slam->writeMapToDisk();
@@ -331,6 +324,24 @@ void MainWindow::Render()
             }
             DrawMesh(*BarSwitchSubmap);
         }
+    }
+
+    if (pangolin::Pushed(*BtnReset))
+    {
+        slam->restart();
+        // if (IsPaused())
+        //     UpdateMeshWithNormal();
+    }
+
+    if (pangolin::Pushed(*BtnSetLost))
+    {
+        slam->setLost(true);
+    }
+
+    if (*BoxPureReloc) {
+        GlobalCfg.bPureReloc = true;
+    } else {
+        GlobalCfg.bPureReloc = false;
     }
 
     if (*BoxDisplayImage)

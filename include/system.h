@@ -6,10 +6,13 @@
 #include <opencv2/opencv.hpp>
 #include "detection/detector.h"
 #include "tracking/rgbd_frame.h"
+#include "tracking/device_image.h"
 #include "tracking/rgbd_odometry.h"
 #include "mapping/SubmapManager.h"
 #include "mapping/VoxelMap.h"
 #include "relocalization/relocalizer.h"
+#include "utils/safe_call.h"
+#include "utils/settings.h"
 
 namespace fusion
 {
@@ -21,15 +24,12 @@ class DenseOdometry;
 class System
 {
 public:
+    System(int id);
     ~System();
-    System(bool bSemantic=true, bool bLoadSMap=false);
     
     // main process function
-    void process_images(const cv::Mat depth, const cv::Mat image, 
-                        bool bSemantic, bool bSubmapping, bool bRecordSequence);
-    void relocalize_image(const cv::Mat depth, const cv::Mat image, 
-                          bool bSemantic);
-
+    void process_images(const cv::Mat depth, const cv::Mat image);
+    void relocalize_image(const cv::Mat depth, const cv::Mat image);
     void relocalization();
     
     // system controls
@@ -46,6 +46,7 @@ public:
     std::vector<std::pair<int, std::vector<float>>> get_objects(bool bMain) const;
     
     // save and read maps
+    void save_full_trajectory();
     void save_mesh_to_file(const char *str);
     void writeMapToDisk() const;
     void readMapFromDisk();
@@ -114,7 +115,7 @@ public:
     std::vector<Eigen::Matrix4f> getMaskRCNNResults() const;
     */
    
-   mutable bool b_reloc_attp;
+//    mutable bool b_reloc_attp;
 //    int reloc_frame_id;
 
 private:
@@ -137,7 +138,7 @@ private:
     void extract_planes(RgbdFramePtr frame);
     void extract_semantics(RgbdFramePtr frame, bool bGeoSeg, float lamb, float tao, int win_size, int thre);
 
-
+    std::vector<Eigen::Matrix4f> vFullTrajectory;
     // size_t sequence_id;
     // size_t frame_start_reloc_id;
     bool hasNewKeyFrame;
