@@ -149,7 +149,7 @@ void System::initialization()
 void System::process_images(const cv::Mat depth, const cv::Mat image)
 {
     cv::Mat depth_float;
-    depth.convertTo(depth_float, CV_32FC1, 1 / 1000.f);
+    depth.convertTo(depth_float, CV_32FC1, 1 / GlobalCfg.depthScale);
     // float max_perct = 0.;
     // int max_perct_idx = -1;
     // float thres_new_sm = 0.50;

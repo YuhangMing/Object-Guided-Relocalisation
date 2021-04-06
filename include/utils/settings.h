@@ -40,18 +40,9 @@ struct Config
     bool bRecord = true;
     std::string record_dir = "/home/yohann/SLAMs/datasets/sequence/";
 
-    int mCurrentFrameId = 0;
-    bool mbEnableDebugLogs = false;
-    bool mbEnableDebugPlot = false;
-    bool mbUseGroundTruth = false;
-    bool mbEmulateRealTime = false;
-    int mbEmulateFrameRate = 30;
-    bool mbIsPaused = false;
-    bool mbStopRequested = false;
-    bool mbStopWhenEnd = false;
-
     int width = 640;
     int height = 480;
+    float depthScale = 1000.0;
     // // Asus
     // float fx = 580;
     // float fy = 580;
@@ -72,30 +63,31 @@ struct Config
     float mfBaseline = 40;
     float mfDepthTh = 40;
     PoseType mInitPose;
-
-    int maxPyramidLevel = 5;
-    bool mbUseRGB = true;
-    bool mbUseDepth = true;
-    float mfMaxDepth = 5.0;
-    float mfDepthScale = 1000.0;
-    float mfRGBGradTh = 16;
-    bool mbFrameToMap = true;
-    float mfICPWeight = 0.999;
-    bool mbEnableLocalBA = true;
-    bool mbTrackLocalMap = true;
     
-    // int mNFeatures = 500;
-    // int mNOctaves = 8;
-    // int mFastInitTh = 20;
-    // int mFastMinTh = 7;
-    // float mfScaleFactor = 1.2;
-
     int mMinImageWidth = 0;
     int mMaxImageWidth = 640;
     int mMinImageHeight = 0;
     int mMaxImageHeight = 480;
-    // int mFeatureGridWidthInv;
-    // int mFeatureGraidHeightInv;
+
+    int maxPyramidLevel = 5;
+    // // ToDo: add more tracking options
+    // bool mbUseRGB = true;
+    // bool mbUseDepth = true;
+    // float mfMaxDepth = 5.0;
+    // float mfRGBGradTh = 16;
+    // bool mbFrameToMap = true;
+    // float mfICPWeight = 0.999;
+
+    // // ToDo: add more system control options
+    // int mCurrentFrameId = 0;
+    // bool mbEnableDebugLogs = false;
+    // bool mbEnableDebugPlot = false;
+    // bool mbUseGroundTruth = false;
+    // bool mbEmulateRealTime = false;
+    // int mbEmulateFrameRate = 30;
+    // bool mbIsPaused = false;
+    // bool mbStopRequested = false;
+    // bool mbStopWhenEnd = false;
 };
 
 extern Config GlobalCfg;

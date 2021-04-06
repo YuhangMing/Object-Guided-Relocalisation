@@ -31,7 +31,6 @@ void SetCalibration()
     //     GlobalCfg.mCvDistCoeff.resize(5);
     //     GlobalCfg.mCvDistCoeff.at<float>(4) = GlobalCfg.mDistCoeff[4];
     // }
-
     // if (GlobalCfg.mCvDistCoeff.at<float>(0) != 0.0)
     // {
     //     cv::Mat mat(4, 2, CV_32F);
@@ -43,14 +42,12 @@ void SetCalibration()
     //     mat.at<float>(2, 1) = GlobalCfg.mHeight;
     //     mat.at<float>(3, 0) = GlobalCfg.mWidth;
     //     mat.at<float>(3, 1) = GlobalCfg.mHeight;
-
     //     // Undistort corners
     //     mat = mat.reshape(2);
     //     cv::undistortPoints(
     //         mat, mat, GlobalCfg.mCvK, GlobalCfg.mCvDistCoeff,
     //         cv::Mat(), GlobalCfg.mCvK);
     //     mat = mat.reshape(1);
-
     //     GlobalCfg.mMinImageWidth = std::min(mat.at<float>(0, 0), mat.at<float>(2, 0));
     //     GlobalCfg.mMaxImageWidth = std::max(mat.at<float>(1, 0), mat.at<float>(3, 0));
     //     GlobalCfg.mMinImageHeight = std::min(mat.at<float>(0, 1), mat.at<float>(1, 1));
@@ -63,7 +60,6 @@ void SetCalibration()
     //     GlobalCfg.mMinImageHeight = 0.0f;
     //     GlobalCfg.mMaxImageHeight = GlobalCfg.mHeight;
     // }
-
     // GlobalCfg.mFeatureGridWidthInv = static_cast<float>(FEATURE_GRID_COLS) / static_cast<float>(GlobalCfg.mMaxImageWidth - GlobalCfg.mMinImageWidth);
     // GlobalCfg.mFeatureGraidHeightInv = static_cast<float>(FEATURE_GRID_ROWS) / static_cast<float>(GlobalCfg.mMaxImageHeight - GlobalCfg.mMinImageHeight);
     GlobalCfg.mfDepthTh = GlobalCfg.mfBaseline * GlobalCfg.mfDepthTh / GlobalCfg.fx;
