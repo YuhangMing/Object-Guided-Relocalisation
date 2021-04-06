@@ -129,6 +129,21 @@ void System::initialization()
     }
     log_file.close();
 #endif
+    
+    if(GlobalCfg.bRecord)
+    {
+        std::ofstream pose_file;
+        pose_file.open(GlobalCfg.record_dir + "pose.txt", std::ios::out);
+        if(pose_file.is_open())
+        {
+            pose_file << "# tx ty tz qx qy qz qw \n";
+        }
+        else
+        {
+            std::cout << "!!!!ERROR: Unable to open the pose file." << std::endl;
+        }
+        pose_file.close();
+    }
 }
 
 void System::process_images(const cv::Mat depth, const cv::Mat image)
@@ -140,19 +155,6 @@ void System::process_images(const cv::Mat depth, const cv::Mat image)
     // float thres_new_sm = 0.50;
     // float thres_passive = 0.20;
     renderIdx = manager->renderIdx;
-
-    // if (GlobalCfg.bRecord)
-    // {
-    //     std::string dir = "/home/yohann/SLAMs/datasets/sequence/";
-    //     // depth
-    //     std::string name_depth = dir + "depth/" + std::to_string(frame_id) + ".png";
-    //     cv::imwrite(name_depth, depth);
-    //     // color
-    //     cv::Mat color;
-    //     cv::cvtColor(image, color, CV_RGB2BGR);
-    //     std::string name_color = dir + "color/" + std::to_string(frame_id) + ".png";
-    //     cv::imwrite(name_color, color);
-    // }
 
     // std::cout << "Frame #" << frame_id << std::endl;
     // In tracking and Mapping, loop through all active submaps
@@ -378,6 +380,37 @@ void System::process_images(const cv::Mat depth, const cv::Mat image)
 
     if (GlobalCfg.bOutputPose)
         vFullTrajectory.push_back(current_frame->pose.cast<float>().matrix());
+
+    if (GlobalCfg.bRecord)
+    {
+        // depth
+        std::string name_depth = GlobalCfg.record_dir + "depth/" + std::to_string(frame_id) + ".png";
+        cv::imwrite(name_depth, depth);
+        // color
+        cv::Mat color;
+        cv::cvtColor(image, color, CV_RGB2BGR);
+        std::string name_color = GlobalCfg.record_dir + "color/" + std::to_string(frame_id) + ".png";
+        cv::imwrite(name_color, color);
+        // pose
+        auto pose = current_frame->pose.cast<float>().matrix();
+        Eigen::Matrix3f rot = pose.topLeftCorner<3,3>();
+        Eigen::Vector3f trans = pose.topRightCorner<3,1>();
+        Eigen::Quaternionf quat(rot);
+        std::ofstream pose_file;
+        pose_file.open(GlobalCfg.record_dir + "pose.txt", std::ios::app);
+        if(pose_file.is_open())
+        {
+            pose_file << trans(0) << " " << trans(1) << " " << trans(2) << " "
+                      << quat.x() << " " << quat.y() << " " << quat.z() << " " << quat.w()
+                      << "\n";
+        }
+        else
+        {
+            std::cout << "!!!!ERROR: Unable to open the pose file." << std::endl;
+        }
+        pose_file.close();
+    }
+
     frame_id += 1;
     hasNewKeyFrame = false;
 }

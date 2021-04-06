@@ -1,6 +1,6 @@
-#include "input/azure.h"
 #include <ctime>
 #include <chrono>
+#include "input/azure.h"
 
 namespace fusion
 {
@@ -656,13 +656,10 @@ void KinectAzure::remap(const k4a_image_t src, const k4a_image_t lut, k4a_image_
 //     int src_width = k4a_image_get_width_pixels(src);
 //     int dst_width = k4a_image_get_width_pixels(dst);
 //     int dst_height = k4a_image_get_height_pixels(dst);
-
 //     uint16_t *src_data = (uint16_t *)(void *)k4a_image_get_buffer(src);
 //     uint16_t *dst_data = (uint16_t *)(void *)k4a_image_get_buffer(dst);
 //     coordinate_t *lut_data = (coordinate_t *)(void *)k4a_image_get_buffer(lut);
-
 //     memset(dst_data, 0, (size_t)dst_width * (size_t)dst_height * sizeof(uint16_t));
-
 //     for (int i = 0; i < dst_width * dst_height; i++)
 //     {
 //         if (lut_data[i].x != INVALID && lut_data[i].y != INVALID)
@@ -678,7 +675,6 @@ void KinectAzure::remap(const k4a_image_t src, const k4a_image_t lut, k4a_image_
 //                                              src_data[lut_data[i].y * src_width + lut_data[i].x + 1],
 //                                              src_data[(lut_data[i].y + 1) * src_width + lut_data[i].x],
 //                                              src_data[(lut_data[i].y + 1) * src_width + lut_data[i].x + 1] };
-
 //                 if (type == INTERPOLATION_BILINEAR_DEPTH)
 //                 {
 //                     // If the image contains invalid data, e.g. depth image contains value 0, ignore the bilinear
@@ -689,7 +685,6 @@ void KinectAzure::remap(const k4a_image_t src, const k4a_image_t lut, k4a_image_
 //                     {
 //                         continue;
 //                     }
-
 //                     // Ignore interpolation at large depth discontinuity without disrupting slanted surface
 //                     // Skip interpolation threshold is estimated based on the following logic:
 //                     // - angle between two pixels is: theta = 0.234375 degree (120 degree / 512) in binning resolution
@@ -714,7 +709,6 @@ void KinectAzure::remap(const k4a_image_t src, const k4a_image_t lut, k4a_image_
 //                         continue;
 //                     }
 //                 }
-
 //                 dst_data[i] = (uint16_t)(neighbors[0] * lut_data[i].weight[0] + neighbors[1] * lut_data[i].weight[1] +
 //                                          neighbors[2] * lut_data[i].weight[2] + neighbors[3] * lut_data[i].weight[3] +
 //                                          0.5f);
@@ -733,14 +727,11 @@ void KinectAzure::remap(const k4a_image_t src, const k4a_image_t lut, k4a_image_
 //     int src_width = k4a_image_get_width_pixels(src);
 //     int dst_width = k4a_image_get_width_pixels(dst);
 //     int dst_height = k4a_image_get_height_pixels(dst);
-
 //     uint32_t *src_data = (uint32_t *)(void *)k4a_image_get_buffer(src);
 //     std::cout << src_data[0] << std::endl;
 //     uint32_t *dst_data = (uint32_t *)(void *)k4a_image_get_buffer(dst);
 //     coordinate_t *lut_data = (coordinate_t *)(void *)k4a_image_get_buffer(lut);
-
 //     memset(dst_data, 0, (size_t)dst_width * (size_t)dst_height * sizeof(uint32_t));
-
 //     for (int i = 0; i < dst_width * dst_height; i++)
 //     {
 //         if (lut_data[i].x != INVALID && lut_data[i].y != INVALID)
@@ -756,7 +747,6 @@ void KinectAzure::remap(const k4a_image_t src, const k4a_image_t lut, k4a_image_
 //                                              src_data[lut_data[i].y * src_width + lut_data[i].x + 1],
 //                                              src_data[(lut_data[i].y + 1) * src_width + lut_data[i].x],
 //                                              src_data[(lut_data[i].y + 1) * src_width + lut_data[i].x + 1] };
-
 //                 if (type == INTERPOLATION_BILINEAR_DEPTH)
 //                 {
 //                     // If the image contains invalid data, e.g. depth image contains value 0, ignore the bilinear
@@ -767,7 +757,6 @@ void KinectAzure::remap(const k4a_image_t src, const k4a_image_t lut, k4a_image_
 //                     {
 //                         continue;
 //                     }
-
 //                     // Ignore interpolation at large depth discontinuity without disrupting slanted surface
 //                     // Skip interpolation threshold is estimated based on the following logic:
 //                     // - angle between two pixels is: theta = 0.234375 degree (120 degree / 512) in binning resolution
@@ -792,7 +781,6 @@ void KinectAzure::remap(const k4a_image_t src, const k4a_image_t lut, k4a_image_
 //                         continue;
 //                     }
 //                 }
-
 //                 dst_data[i] = (uint32_t)(neighbors[0] * lut_data[i].weight[0] + neighbors[1] * lut_data[i].weight[1] +
 //                                          neighbors[2] * lut_data[i].weight[2] + neighbors[3] * lut_data[i].weight[3] +
 //                                          0.5f);

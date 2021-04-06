@@ -65,9 +65,9 @@ int main(int argc, char **argv)
             // std::cout << "## Processing an image takes " << ( std::clock() - start ) / (double) CLOCKS_PER_SEC << " seconds" << std::endl;
             
             if(!GlobalCfg.bRecord && GlobalCfg.bSemantic)
-            window.SetRGBSource(slam.get_detected_image());
+              window.SetRGBSource(slam.get_detected_image());
             else
-            window.SetRGBSource(image);
+              window.SetRGBSource(image);
             window.SetDepthSource(depth);   // raw depth
             // window.SetDetectedSource(slam.get_detected_image());
             // window.SetRenderScene(slam.get_rendered_scene());

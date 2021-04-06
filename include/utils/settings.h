@@ -23,19 +23,22 @@ typedef Sophus::SE3d PoseType;
 struct Config
 {
     bool bEnableViewer = true;
-    bool bSemantic = true;
+    bool bSemantic = false;
     bool bSubmapping = false;
-    bool bLoadDiskMap = false;
     bool bPureReloc = false;
-    bool bOutputPose = true;
-    bool bRecord = false;
-    
     std::string data_path = "/home/yohann/SLAMs/datasets/BOR/";
-    std::string map_file = "map";
+    
+    bool bLoadDiskMap = false;
     // set to 1 for relocalisation tests
     // set to 4 for visualising maps registration
     int mapSize = 1;    
+    std::string map_file = "map";
+    
+    bool bOutputPose = false;
     std::string output_pose_file = "/home/yohann/SLAMs/Object-Guided-Relocalisation/pose_info/";
+    
+    bool bRecord = true;
+    std::string record_dir = "/home/yohann/SLAMs/datasets/sequence/";
 
     int mCurrentFrameId = 0;
     bool mbEnableDebugLogs = false;
@@ -49,10 +52,16 @@ struct Config
 
     int width = 640;
     int height = 480;
-    float fx = 580;
-    float fy = 580;
-    float cx = 319.5;
-    float cy = 239.5;
+    // // Asus
+    // float fx = 580;
+    // float fy = 580;
+    // float cx = 319.5;
+    // float cy = 239.5;
+    // Azure
+    float fx = 607.665;
+    float fy = 607.516;
+    float cx = 321.239;
+    float cy = 245.043;
     float invfx;
     float invfy;
     Eigen::Matrix3f K;
