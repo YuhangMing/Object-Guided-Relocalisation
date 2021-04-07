@@ -144,8 +144,8 @@ private:
     //! color palette
     /*
         bg - black
-        bottle - olive
-        bowl - orange
+        bottle - orange
+        bowl - olive 
         camera - purple
         can - yellow 
         laptop - navy

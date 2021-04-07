@@ -64,6 +64,10 @@
         "typeinfo": "cpp",
         "variant": "cpp",
         "*.ipp": "cpp",
-        "core": "cpp"
+        "core": "cpp",
+        "codecvt": "cpp",
+        "unordered_set": "cpp",
+        "future": "cpp",
+        "valarray": "cpp"
     }
 }

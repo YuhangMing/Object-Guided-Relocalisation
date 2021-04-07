@@ -40,7 +40,9 @@ void SubmapManager::Create(int submapIdx, bool bTrack, bool bRender)
     // state.num_total_voxel_blocks_ = 50000;
     // state.num_max_rendering_blocks_ = 25000;
     // state.num_max_mesh_triangles_ = 5000000;
-	pDenseMap->create(62500, 50000, 50000, 0.004, 0.012);
+	// pDenseMap->create(62500, 50000, 50000, 0.004, 0.012);	// delicate small maps
+	pDenseMap->create(62500, 50000, 50000, 0.008, 0.048);	// mid map
+	// pDenseMap->create(62500, 50000, 50000, 0.01, 0.1);	// coarse large map
 	pDenseMap->reset();
 	pDenseMap->SetPose(Sophus::SE3d());
 
@@ -353,6 +355,8 @@ void SubmapManager::ResetSubmaps(){
 	// activeTOpassiveIdx.clear();
 }
 
+
+/* Submapping disabled for now, need to be rewritten
 void SubmapManager::Create(int submapIdx, RgbdImagePtr ref_img, bool bTrack, bool bRender)
 {
 	// std::cout << "Create submap no. " << submapIdx << std::endl;
@@ -381,8 +385,32 @@ void SubmapManager::Create(int submapIdx, RgbdImagePtr ref_img, bool bTrack, boo
 	// ref_frame_id = ref_frame->id;
 }
 
+void SubmapManager::readSMapFromDisk(std::string file_name)
+{
+	// // semantic map
+	// for(size_t idx=1; idx<7; ++idx){
+	// 	std::vector<std::shared_ptr<Cuboid3d>> one_map;
+	// 	std::ifstream semanticfile(file_name+std::to_string(idx)+".data-semantic.txt", std::ios::in);
+	// 	int numObj;
+	// 	if (semanticfile.is_open())
+	// 	{
+	// 		std::string sNumObj;
+	// 		std::getline(semanticfile, sNumObj);
+	// 		numObj = std::stoi(sNumObj);
+	// 		std::cout << sNumObj + " objects in the map." << std::endl;
+	// 	}
+	// 	semanticfile.close();
+	// 	for(size_t i=0; i<numObj; ++i)
+	// 	{
+	// 		std::shared_ptr<Cuboid3d> new_cuboid(new Cuboid3d(file_name+std::to_string(idx)+".data", i*6+1));
+	// 		one_map.push_back(std::move(new_cuboid));
+	// 	}
 
-/* Submapping disabled for now, need to be rewritten
+	// 	// store the map
+	// 	vSMaps.push_back(one_map);
+	// }
+}
+
 float SubMapManager::CheckVisPercent(int submapIdx){
 	return active_submaps[submapIdx]->CheckVisPercent();
 }
@@ -595,31 +623,5 @@ void SubMapManager::SetTracker(std::shared_ptr<DenseOdometry> pOdometry){
 	odometry = pOdometry;
 }
 */
-
-void SubmapManager::readSMapFromDisk(std::string file_name)
-{
-	// // semantic map
-	// for(size_t idx=1; idx<7; ++idx){
-	// 	std::vector<std::shared_ptr<Cuboid3d>> one_map;
-	// 	std::ifstream semanticfile(file_name+std::to_string(idx)+".data-semantic.txt", std::ios::in);
-	// 	int numObj;
-	// 	if (semanticfile.is_open())
-	// 	{
-	// 		std::string sNumObj;
-	// 		std::getline(semanticfile, sNumObj);
-	// 		numObj = std::stoi(sNumObj);
-	// 		std::cout << sNumObj + " objects in the map." << std::endl;
-	// 	}
-	// 	semanticfile.close();
-	// 	for(size_t i=0; i<numObj; ++i)
-	// 	{
-	// 		std::shared_ptr<Cuboid3d> new_cuboid(new Cuboid3d(file_name+std::to_string(idx)+".data", i*6+1));
-	// 		one_map.push_back(std::move(new_cuboid));
-	// 	}
-
-	// 	// store the map
-	// 	vSMaps.push_back(one_map);
-	// }
-}
 
 } // namespace fusion

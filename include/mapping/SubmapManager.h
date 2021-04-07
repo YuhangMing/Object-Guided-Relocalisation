@@ -26,7 +26,7 @@ public:
 
 	void Create(int submapIdx, bool bTrack=false, bool bRender=false);
 	void AddKeyFrame(Eigen::Matrix4f kfPose);
-	
+	void ResetSubmaps();
 
 	std::vector<MapStruct *> getDenseMaps();
 	std::vector<Eigen::Matrix<float, 4, 4>> GetKFPoses();
@@ -46,10 +46,11 @@ public:
 	std::vector< MapStruct * > vActiveSubmaps;
 	std::vector< ObjectMap * > vObjectMaps;
 
-	void Create(int submapIdx, RgbdImagePtr ref_img, bool bTrack=false, bool bRender=true);
-	void ResetSubmaps();
+	
 
 	/*
+	void Create(int submapIdx, RgbdImagePtr ref_img, bool bTrack=false, bool bRender=true);
+	
 	float CheckVisPercent(int submapIdx);
 	void CheckActive();
 	void CheckTrackAndRender(int cur_frame_id, int max_perct_idx);
@@ -65,6 +66,11 @@ public:
 
 	void SetTracker(std::shared_ptr<DenseOdometry> pOdometry);
 	void SetExtractor(std::shared_ptr<FeatureExtractor> pExtractor);
+
+	// pure relocalization
+	// v of semantic maps, each map contains a vector of cuboids
+	std::vector< std::vector<std::shared_ptr<Cuboid3d>> >  vSMaps;
+	void readSMapFromDisk(std::string file_name);
 	*/
 
 	std::shared_ptr<DenseOdometry> odometry;
@@ -82,10 +88,6 @@ public:
 	// std::map< int, std::vector<Eigen::Vector4f> > mPassiveMPs;
 	// std::map< int, std::vector<Eigen::Vector4f> > mPassiveNs;
 
-	// pure relocalization
-	// v of semantic maps, each map contains a vector of cuboids
-	std::vector< std::vector<std::shared_ptr<Cuboid3d>> >  vSMaps;
-	void readSMapFromDisk(std::string file_name);
 protected:
 
 private:

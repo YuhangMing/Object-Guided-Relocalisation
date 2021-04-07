@@ -97,11 +97,6 @@ System::System(int id) : is_initialized(false), hasNewKeyFrame(false)
     }
 
     vFullTrajectory.clear();
-    // ??? change later
-    // // LOAD SEMANTIC MAPS
-    // if(bLoadSMap){
-    //     manager->readSMapFromDisk("map");
-    // }
     // output_file_name = "reloc";
     // pause_window = false;
 }
@@ -240,18 +235,24 @@ void System::process_images(const cv::Mat depth, const cv::Mat image)
             // add new keyframe in the map & calculate cuboids for objects detected
             if(hasNewKeyFrame && GlobalCfg.bSemantic){
                 manager->AddKeyFrame(current_keyframe->pose.matrix().cast<float>()); // DO WE NEED THIS?
+                // perform semantic analysis on keyframe
+                extract_semantics(odometry->vModelFrames[i], false, 1, 0.002, 5, 7);
+                if(current_keyframe->numDetection > 0){
+                    manager->vObjectMaps[i]->update_objects(odometry->vModelFrames[i]);
+                    // // INTEROGATIVE: Do we actually need this step?
+                    // manager->active_submaps[i]->color_objects(reference_image);
+                    // manager->active_submaps[i]->raycast(reference_image->get_vmap(), reference_image->get_nmap(0), reference_image->get_object_mask(), reference_frame->pose);
+                }
                 /* Store vertex map from current KF.
-                reference_image->downloadVNM(odometry->vModelFrames[i], false);
-                // Store vertex map of current KF as point cloud in the file.
-                // std::cout << "Type of vmap is ";
-                // std::cout << odometry->vModelFrames[i]->vmap.type() << std::endl;
+                cv::Mat vertices;
+                cuVMap.download(vertices);
                 std::ofstream pcd_file;
                 std::string pcd_file_name = "point_cloud_bin_" + std::to_string(frame_id) + ".txt";
                 pcd_file.open(pcd_file_name, std::ios::app);
-                int channel = odometry->vModelFrames[i]->vmap.channels();
-                int rows = odometry->vModelFrames[i]->vmap.rows;
-                int cols = odometry->vModelFrames[i]->vmap.cols;
-                float* vmap_data = (float*) odometry->vModelFrames[i]->vmap.data;
+                int channel = vertices.channels();
+                int rows = vertices.rows;
+                int cols = vertices.cols;
+                float* vmap_data = (float*) vertices.data;
                 if(pcd_file.is_open())
                 {
                     for(int vmapi=0; vmapi < rows*cols; ++vmapi){
@@ -261,15 +262,29 @@ void System::process_images(const cv::Mat depth, const cv::Mat image)
                 }
                 pcd_file.close();
                 */
-                // perform semantic analysis on keyframe
-                extract_semantics(odometry->vModelFrames[i], false, 1, 0.002, 5, 7);
-                if(current_keyframe->numDetection > 0){
-                    manager->vObjectMaps[i]->update_objects(odometry->vModelFrames[i]);
-                    // // INTEROGATIVE: Do we actually need this step?
-                    // manager->active_submaps[i]->color_objects(reference_image);
-                    // manager->active_submaps[i]->raycast(reference_image->get_vmap(), reference_image->get_nmap(0), reference_image->get_object_mask(), reference_frame->pose);
-                }
             }
+            
+            // // PREDATOR test
+            // if(frame_id == 1200)
+            // {
+            //     cv::Mat vertices;
+            //     cuVMap.download(vertices);
+            //     std::ofstream pcd_file;
+            //     std::string pcd_file_name = "point_cloud_bin_" + std::to_string(frame_id) + ".txt";
+            //     pcd_file.open(pcd_file_name, std::ios::app);
+            //     int channel = vertices.channels();
+            //     int rows = vertices.rows;
+            //     int cols = vertices.cols;
+            //     float* vmap_data = (float*) vertices.data;
+            //     if(pcd_file.is_open())
+            //     {
+            //         for(int vmapi=0; vmapi < rows*cols; ++vmapi){
+            //             pcd_file << vmap_data[vmapi*4] << "," << vmap_data[vmapi*4+1] << "," 
+            //                  << vmap_data[vmapi*4+2] << "," << vmap_data[vmapi*4+3] << "\n";
+            //         } 
+            //     }
+            //     pcd_file.close();
+            // }
             
             // if(manager->active_submaps[i]->bRender){
             //     // update the map
@@ -324,6 +339,9 @@ void System::process_images(const cv::Mat depth, const cv::Mat image)
         else
         {
             std::cout << "\n !!!! Tracking Lost at frame " << frame_id << "! Trying to recover..." << std::endl;
+            if(GlobalCfg.bRecord)
+                GlobalCfg.bPauseWindow = true;
+            
             if(!GlobalCfg.bSemantic)
                 return;
             // reloc_frame_id++;
@@ -445,6 +463,8 @@ void System::relocalize_image(const cv::Mat depth, const cv::Mat image)
 
     // reloc_frame_id++;
     // reloc_frame_id = frame_id - frame_start_reloc_id;
+    
+    // TEST with window paused
 }
 
 void System::relocalization()
@@ -464,6 +484,13 @@ void System::relocalization()
 #ifdef LOG
     log_string += " # of detection stored: " + std::to_string(current_frame->numDetection) + "\n";
 #endif
+    if(current_frame->numDetection <3)
+    {
+        // !!!! Segmentation fault when less than 3 objs detected. !!!
+        current_frame->pose = Sophus::SE3d(Eigen::Matrix4d::Identity());
+        std::cout << "No enough detections" << std::endl;
+        return;
+    }
     
     //-step 2: solve the absolute orientation (AO) problem (centroid of box and corresponding cuboid)
     std::cout << "STEP 2: Object guiding." << std::endl;

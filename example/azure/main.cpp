@@ -35,6 +35,13 @@ int main(int argc, char** argv)
                 window.SetRGBSource(image);
                 window.SetDepthSource(depth);   // raw depth
                 window.SetCurrentCamera(slam.get_camera_pose());
+                window.mbFlagUpdateMesh = false;
+
+                if(GlobalCfg.bPauseWindow)
+                    window.SetPause();
+            }
+            else
+            {
                 window.mbFlagUpdateMesh = true;
             }
         }
