@@ -26,11 +26,11 @@ public:
     void SetVertexSize(size_t Size);
     void SetRGBSource(cv::Mat RgbImage);
     void SetDepthSource(cv::Mat DepthImage);
+    void SetDetectedSource(cv::Mat DetectedImage);
     void SetCurrentCamera(Eigen::Matrix4f T);
     void SetSystem(fusion::System *sys);
     void SetPause();
 
-    // void SetDetectedSource(cv::Mat DetectedImage);
     // void SetRenderScene(cv::Mat SceneImage);
     // void SetFeatureImage(cv::Mat featureImage);
     // void SetNOCSMap(cv::Mat SceneImage);
@@ -76,7 +76,7 @@ private:
     //! Displayed textures
     pangolin::GlTexture TextureRGB;
     pangolin::GlTexture TextureDepth;
-    // pangolin::GlTexture TextureDetected; // merged to RGB
+    pangolin::GlTexture TextureDetected; // used as backup rgb display
     // pangolin::GlTexture TextureScene;
     // pangolin::GlTexture TextureNOCSMap;
     // pangolin::GlTexture TextureMask;

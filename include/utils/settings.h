@@ -31,6 +31,7 @@ struct Config
     std::string data_path = "/home/yohann/SLAMs/datasets/OS/";
     
     bool bLoadDiskMap = false;
+    bool bVisMapReg = false;    // display two color for pair-wise map registration
     // set to 1 for relocalisation tests
     // set to 4 for visualising maps registration
     int mapSize = 1;    

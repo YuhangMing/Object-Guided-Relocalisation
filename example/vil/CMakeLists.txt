@@ -7,3 +7,10 @@ PRIVATE
     fusion
 )
 
+add_executable(map visualiseMapReg.cpp)
+
+target_link_libraries(map
+PRIVATE
+    fusion
+)
+

@@ -50,6 +50,7 @@ public:
     void save_mesh_to_file(const char *str);
     void writeMapToDisk() const;
     void readMapFromDisk();
+    void readOneMap(std::string map_path);
     //!! Remove vPoses after orthogonal issue in pose loading
     std::vector<Eigen::Matrix4d> readMapPoses();
 

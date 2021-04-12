@@ -67,7 +67,7 @@ void MainWindow::SetupDisplays()
     BarSwitchCuboid = std::make_shared<pangolin::Var<int>>("Menu.Display Cuboid", 7, 0, 7);
     // display name, current val, min, max;
     // BarSwitchMap = std::make_shared<pangolin::Var<int>>("Menu.Display Map", 1, 0, 2);
-    BarSwitchSubmap = std::make_shared<pangolin::Var<int>>("Menu.Submaps", 0, 0, GlobalCfg.mapSize);
+    BarSwitchSubmap = std::make_shared<pangolin::Var<int>>("Menu.Submaps", GlobalCfg.mapSize, 0, GlobalCfg.mapSize);
     BtnSaveMap = std::make_shared<pangolin::Var<bool>>("Menu.Save Map", false, false);
     
     /* Semantic disabled for now
@@ -139,8 +139,8 @@ void MainWindow::InitTextures()
 {
     TextureRGB.Reinitialise(640, 480, GL_RGB, true, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
     TextureDepth.Reinitialise(640, 480, GL_LUMINANCE, true, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, NULL);
+    TextureDetected.Reinitialise(640, 480, GL_RGB, true, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
 
-    // TextureDetected.Reinitialise(640, 480, GL_RGB, true, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
     // TextureScene.Reinitialise(640, 480, GL_RGBA, true, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
     // TextureNOCSMap.Reinitialise(640, 480, GL_RGB, true, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
     // TextureMask.Reinitialise(640, 480, GL_LUMINANCE, true, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, NULL);
@@ -157,6 +157,7 @@ void MainWindow::InitGlSlPrograms()
         "uniform mat4 mvpMat;\n"
         "uniform mat4 Tmw;\n"
         "uniform float colourTaint;\n"
+        "uniform float colourTaint2;\n"
         "out vec3 shaded_colour;\n"
         "\n"
         "void main(void) {\n"
@@ -177,8 +178,11 @@ void MainWindow::InitGlSlPrograms()
         "    float i2 = lx * kd * dx * max(0.0, dot(a_normal, L));\n"
         "    float i3 = lx * ks * sx * pow(max(0.0, dot(R, V)), n);\n"
         "    float Ix = max(0.0, min(255.0, i1 + i2 + i3));\n"
-        "    shaded_colour = vec3(Ix, Ix, Ix);\n"
+        "    shaded_colour = vec3(colourTaint, Ix, colourTaint2);\n"
         "}\n";
+    // Use these two colors   
+    // "    shaded_colour = vec3(255.0, Ix, 0.0);\n"    target
+    // "    shaded_colour = vec3(0.0, Ix, 255.0);\n"    source
 
     // TODO: how to better assign different color to different submaps.
     // // assign different uni-color to different submaps
@@ -275,11 +279,11 @@ void MainWindow::SetDepthSource(cv::Mat DepthImage)
     Depth_8bit.convertTo(Depth_8bit, CV_8U);
     TextureDepth.Upload(Depth_8bit.data, GL_LUMINANCE, GL_UNSIGNED_BYTE);
 }
+void MainWindow::SetDetectedSource(cv::Mat DetectedImage)
+{
+    TextureDetected.Upload(DetectedImage.data, GL_RGB, GL_UNSIGNED_BYTE);
+}
 
-// void MainWindow::SetDetectedSource(cv::Mat DetectedImage)
-// {
-//     TextureDetected.Upload(DetectedImage.data, GL_RGB, GL_UNSIGNED_BYTE);
-// }
 // void MainWindow::SetRenderScene(cv::Mat SceneImage)
 // {
 //     TextureScene.Upload(SceneImage.data, GL_RGBA, GL_UNSIGNED_BYTE);
@@ -351,8 +355,13 @@ void MainWindow::Render()
     }
     if (*BoxDisplayScene)
     {
-        mpViewRelocView->Activate();
-        TextureDepth.RenderToViewportFlipY();
+        if(GlobalCfg.bVisMapReg){
+            mpViewRelocView->Activate();
+            TextureDetected.RenderToViewportFlipY();
+        } else {
+            mpViewRelocView->Activate();
+            TextureDepth.RenderToViewportFlipY();
+        }
     }
     // if (*BoxDisplayDepth)
     // {
@@ -935,6 +944,10 @@ void MainWindow::DrawMesh(int idx)
     int count = 0;
 
     // render the maps
+    std::vector< std::vector<float> > color{
+        {255.0, 0.0},
+        {0.0, 255.0}
+    };
     for (auto pMap : vpMapsRender)
     {
         if(!pMap->mbHasMesh)
@@ -966,8 +979,9 @@ void MainWindow::DrawMesh(int idx)
         ShadingProg.Bind();
         ShadingProg.SetUniform("Tmw", pangolin::OpenGlMatrix(Tmw));
         ShadingProg.SetUniform("mvpMat", CameraView->GetProjectionModelViewMatrix());
-        ShadingProg.SetUniform("colourTaint", pMap->mColourTaint);
-
+        ShadingProg.SetUniform("colourTaint", color[count][0]); 
+        ShadingProg.SetUniform("colourTaint2", color[count][1]);    // map registration visualisation test
+        
         glBindBuffer(GL_ARRAY_BUFFER, pMap->mGlVertexBuffer);
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void *)0);
         glEnableVertexAttribArray(0);

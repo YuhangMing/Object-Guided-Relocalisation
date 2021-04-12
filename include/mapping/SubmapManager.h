@@ -37,6 +37,7 @@ public:
 	void readMapFromDisk();
 	void writePosesToText(std::string file_name, std::vector<Eigen::Matrix4d> vPoses);
 	void readPosesFromText(std::string file_name, std::vector<Eigen::Matrix4d>& vPoses);
+	void CreateWithLoad(std::string map_path);
 	
 	//!! Remove vPoses after orthogonal issue in pose loading
 	std::vector<Eigen::Matrix4d> vSubmapPoses;

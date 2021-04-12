@@ -40,8 +40,8 @@ void SubmapManager::Create(int submapIdx, bool bTrack, bool bRender)
     // state.num_total_voxel_blocks_ = 50000;
     // state.num_max_rendering_blocks_ = 25000;
     // state.num_max_mesh_triangles_ = 5000000;
-	// pDenseMap->create(62500, 50000, 50000, 0.004, 0.012);	// delicate small maps
-	pDenseMap->create(62500, 50000, 50000, 0.008, 0.048);	// mid map
+	pDenseMap->create(62500, 50000, 50000, 0.004, 0.012);	// delicate small maps
+	// pDenseMap->create(62500, 50000, 50000, 0.008, 0.048);	// mid map
 	// pDenseMap->create(62500, 50000, 50000, 0.01, 0.1);	// coarse large map
 	pDenseMap->reset();
 	pDenseMap->SetPose(Sophus::SE3d());
@@ -339,6 +339,73 @@ void SubmapManager::readPosesFromText(std::string file_name,
         std::cout << "FAILED: cannot find " << file_name << std::endl;
     }
     pose_file.close();
+}
+
+// test for map registration visualisation
+void SubmapManager::CreateWithLoad(std::string map_path)
+{
+	// pose
+	std::string pose_path = map_path + "_poses.txt";
+	std::cout << "Reading map pose: " << pose_path << std::endl;
+	std::ifstream pose_file(pose_path);
+    if(pose_file.is_open())
+    {
+        std::string one_line;
+        while(std::getline(pose_file, one_line))
+        {
+            std::istringstream ss(one_line);
+            double qua[4];
+            double trans[3];
+            for(size_t i=0; i<8; ++i){
+                double one_val;
+                ss >> one_val;
+                if(i == 0){
+                    // std::cout << one_val << std::endl;
+                    continue;
+                }
+                if(i < 4){
+                    trans[i-1] = one_val;
+                } else {
+                    qua[i-4] = one_val;
+                }
+            }
+            Eigen::Quaterniond q(qua);
+            Eigen::Vector3d t(trans[0], trans[1], trans[2]);
+            std::cout << q.x() << ", " << q.y() << ", " << q.z() << ", " << q.w()
+                      << ", " << t(0) << ", " << t(1) << ", " << t(2) << std::endl;
+            Eigen::Matrix3d Rot = q.toRotationMatrix();
+			// // Enforce orthogonal requirement !!!!!!! WRONG ROTATION RETURNED
+			// Eigen::JacobiSVD<Eigen::Matrix3d> svd(Rot, Eigen::ComputeThinU | Eigen::ComputeThinV);
+			// // std::cout << "Its singular values are:" << std::endl << svd.singularValues() << std::endl;
+			// // std::cout << "Its left singular vectors are the columns of the thin U matrix:" << std::endl << svd.matrixU() << std::endl;
+			// // std::cout << "Its right singular vectors are the columns of the thin V matrix:" << std::endl << svd.matrixV() << std::endl;
+			// Rot = svd.matrixU() * svd.matrixV();
+
+			Eigen::Matrix4d T = Eigen::Matrix4d::Identity();
+            T.topLeftCorner(3,3) = Rot;
+            T.topRightCorner(3,1) = t;
+
+            vSubmapPoses.push_back(T);
+        }
+    } else {
+        std::cout << "FAILED: cannot find " << pose_path << std::endl;
+    }
+    pose_file.close();
+
+	// dense map
+	std::string file_name = map_path + "_4.data";
+	std::cout << "Reading dense map: " << file_name << std::endl;
+	auto pDenseMap = new MapStruct(GlobalCfg.K);
+	pDenseMap->SetMeshEngine(pMesher);
+	pDenseMap->SetTracer(pRayTracer);
+	pDenseMap->readFromDisk(file_name);
+	pDenseMap->SetPose(Sophus::SE3d()); //vPoseMaps[i]
+
+	vActiveSubmaps.push_back(pDenseMap);
+
+	renderIdx = 0; // ?? set to i or 0 here???
+	ref_frame_id = 0;
+
 }
 
 void SubmapManager::ResetSubmaps(){

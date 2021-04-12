@@ -825,6 +825,10 @@ void System::readMapFromDisk()
     std::cout << "Reading map(s) from the disk..." << std::endl;
     manager->readMapFromDisk();
 }
+void System::readOneMap(std::string map_path)
+{
+    manager->CreateWithLoad(map_path);
+}
 //!! Remove vPoses after orthogonal issue in pose loading
 std::vector<Eigen::Matrix4d> System::readMapPoses()
 {
