@@ -1,5 +1,7 @@
 #include "detection/map_object.h"
 
+// #define OBJ_DETAILS
+
 namespace fusion
 {
 
@@ -143,7 +145,9 @@ float Object3d::bbox3d_overlap(Eigen::Vector3d &cent, std::vector<float> &dim, f
 
     // if criteria met, update that cuboid, else store as new cuboid
     if(max_IoU < 0.3){
-        std::cout << "!!!! Max IoU = " << max_IoU << ". Overlap volume too small, add new cuboid." << std::endl;
+#ifdef OBJ_DETAILS
+    std::cout << "!!!! Max IoU = " << max_IoU << ". Overlap volume too small, add new cuboid." << std::endl;
+#endif
         cuboid_idx = -1;
     }
 

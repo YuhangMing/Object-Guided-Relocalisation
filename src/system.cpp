@@ -7,7 +7,7 @@
 #include <string>
 
 // #define CUDA_MEM
-// #define TIMING
+#define TIMING
 // #define LOG
 
 namespace fusion
@@ -163,11 +163,15 @@ void System::process_images(const cv::Mat depth, const cv::Mat image)
             initialization();
 
         /* TRACKING */
+#ifdef TIMING
+    std::clock_t t_0, t_1, t_2, t_3, t_4; 
+    t_0 = std::clock();    // tracking start
+#endif
         if (!odometry->trackingLost){
             // std::cout << "- Dense Tracking." <<  std::endl;
             // update pose of current_frame and reference_frame in corresponding DeviceImage
             odometry->trackFrame(current_frame);
-            
+
             //---- only create kf in the rendering map ----
             if(keyframe_needed() && i == renderIdx && !odometry->trackingLost)
                 create_keyframe();
@@ -175,7 +179,7 @@ void System::process_images(const cv::Mat depth, const cv::Mat image)
 
         /* RENDERING */
         if (!odometry->trackingLost)
-        {
+        {    
             /* Attepmt to not use device image in tracking. Result in noisy reconstruction.
             // cv::cuda::GpuMat cuImage, cuDepth, cuVMap;
             // odometry->get_current_color().copyTo(cuImage);
@@ -210,7 +214,9 @@ void System::process_images(const cv::Mat depth, const cv::Mat image)
             // std::cout << "Update tracker references." << std::endl;
             // odometry->update_reference_model(cuVMap); // update vmap & nmap in tracker
             */
-
+#ifdef TIMING
+    t_1 = std::clock();    // tracking finished, mapping start
+#endif
             cv::cuda::GpuMat cuDepth, cuVMap; 
             auto current_image = odometry->get_current_image();
             auto current_frame = current_image->get_reference_frame();
@@ -221,7 +227,9 @@ void System::process_images(const cv::Mat depth, const cv::Mat image)
             
             // std::cout << "- Map Fusing." << std::endl;
             manager->vActiveSubmaps[i]->Fuse(cuDepth, Tcm);
-
+#ifdef TIMING
+    t_2 = std::clock();    // mapping finished, rendering start
+#endif
             // std::cout << "- Raytracing." << std::endl;
             manager->vActiveSubmaps[i]->RayTrace(Tcm);
             cuVMap = manager->vActiveSubmaps[i]->GetRayTracingResult();            
@@ -231,7 +239,9 @@ void System::process_images(const cv::Mat depth, const cv::Mat image)
             // cuVMap.download(test_raycasted_vmap);
             // cv::imshow("vmap after raycast", test_raycasted_vmap);
             // cv::waitKey(0);
-
+#ifdef TIMING
+    t_3 = std::clock();    // rendering finished, semantic start
+#endif
             // add new keyframe in the map & calculate cuboids for objects detected
             if(hasNewKeyFrame && GlobalCfg.bSemantic){
                 manager->AddKeyFrame(current_keyframe->pose.matrix().cast<float>()); // DO WE NEED THIS?
@@ -262,6 +272,19 @@ void System::process_images(const cv::Mat depth, const cv::Mat image)
                 }
                 pcd_file.close();
                 */
+#ifdef TIMING
+    t_4 = std::clock();    // semantic finished
+
+    std::cout << "----------------------------------------------------\n"
+              << "Timing analysis:\n"
+              << " - Tracking: " << ( t_1 - t_0 ) / (double) CLOCKS_PER_SEC << " seconds;\n" 
+              << " - Map Fusing: " << ( t_2 - t_1 ) / (double) CLOCKS_PER_SEC << " seconds;\n" 
+              << " - Ray Tracing: " << ( t_3 - t_2 ) / (double) CLOCKS_PER_SEC << " seconds;\n" 
+              << " - Semantic Extracting: " << ( t_4 - t_3 ) / (double) CLOCKS_PER_SEC << " seconds;\n"
+              << " - Overall, Tracking-Mapping takes " << ( t_4 - t_0 ) / (double) CLOCKS_PER_SEC << " seconds;\n"
+              << "----------------------------------------------------"
+              << std::endl;
+#endif
             }
             
             // // PREDATOR test
@@ -474,8 +497,11 @@ void System::relocalization()
     std::string log_string = "---- Tracking Lost at frame " + std::to_string(frame_id) + ". Trying to recover...\n";
 #endif
 
-    std::clock_t start = std::clock();
     // perform OBJECT based relocalization
+#ifdef TIMING
+    std::clock_t t_0, t_1, t_2, t_3, t_4;
+    t_0 = std::clock();    // semantic start
+#endif
     //-step 1: detect obejcts and estimate poses/cuboids in the current frame
     std::cout << "STEP 1: Extract objects." << std::endl;
     auto current_image = odometry->get_current_image();
@@ -491,7 +517,10 @@ void System::relocalization()
         std::cout << "No enough detections" << std::endl;
         return;
     }
-    
+
+#ifdef TIMING
+    t_1 = std::clock();    // semantic finished, object guiding start
+#endif    
     //-step 2: solve the absolute orientation (AO) problem (centroid of box and corresponding cuboid)
     std::cout << "STEP 2: Object guiding." << std::endl;
     bool b_recovered = false, 
@@ -512,6 +541,9 @@ void System::relocalization()
     }
     else
     {
+#ifdef TIMING
+    t_2 = std::clock();    // object guiding finished, optimisation start
+#endif
     //-step 3: use the pose from prob AO as the candidate for icp optimization
         std::cout << "STEP 3: Depth-Centroid icp optimisation & validation." << std::endl;
         float loss;
@@ -593,7 +625,10 @@ void System::relocalization()
     log_string += "    icp (Depth+Centroid) loss is " + std::to_string(loss) + "\n";
 #endif
         }
-    //-step 4: prepare for next tracking    
+#ifdef TIMING
+    t_3 = std::clock();    // optimisation finished, tracking preparation start
+#endif
+    //-step 4: prepare for next tracking
         std::cout << "STEP 4: Prepare for next tracking." << std::endl;
         if(b_recovered && valid_pose){
             // update current frame with best pose
@@ -657,10 +692,21 @@ void System::relocalization()
     // // } else {
     // //     pause_window = false;
     // // }
+#ifdef TIMING
+    t_4 = std::clock();    // tracking preparation finished
 
-    std::cout << "#### Relocalization process takes "
-                << ( std::clock() - start ) / (double) CLOCKS_PER_SEC 
-                << " seconds; " << std::endl;
+    std::cout << "----------------------------------------------------\n"
+              << "Timing analysis:\n"
+              << " - Semantic Extracting: " << ( t_1 - t_0 ) / (double) CLOCKS_PER_SEC << " seconds;\n";
+    if(b_enough_corresp){          
+        std::cout << " - Object-Level Relocalisation: " << ( t_2 - t_1 ) / (double) CLOCKS_PER_SEC << " seconds;\n" 
+                  << " - Depth-Centroid Optimisation: " << ( t_3 - t_2 ) / (double) CLOCKS_PER_SEC << " seconds;\n" 
+                  << " - Ray Tracing: " << ( t_4 - t_3 ) / (double) CLOCKS_PER_SEC << " seconds;\n";
+    }
+    std::cout << " - Overall, Relocalisation takes " << ( t_4 - t_0 ) / (double) CLOCKS_PER_SEC << " seconds;\n"
+              << "----------------------------------------------------"
+              << std::endl;
+#endif
 }
 
 

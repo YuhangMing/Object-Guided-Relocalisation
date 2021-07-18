@@ -248,7 +248,7 @@ TrackingResult DenseTracking::compute_transform_depth_centroids(const RgbdImageP
 
       icp_error = sqrt(residual_icp_(0)) / residual_icp_(1);
       cent_error = sqrt(residual_cent_(0)) / residual_cent_(1);
-      std::cout << "--error: icp-" << icp_error << ", cent-" << cent_error << std::endl;
+      // std::cout << "--error: icp-" << icp_error << ", cent-" << cent_error << std::endl;
 
       if (std::isnan(icp_error) || std::isnan(cent_error))
       {

@@ -28,7 +28,8 @@ struct Config
     bool bSubmapping = false;
     bool bPureReloc = false;
     // std::string data_path = "/home/yohann/SLAMs/datasets/BOR/";
-    std::string data_path = "/home/yohann/SLAMs/datasets/OS/";
+    std::string data_path = "/home/yohann/SLAMs/datasets/BOR-full/";
+    // std::string data_path = "/home/yohann/SLAMs/datasets/OS/";
     
     bool bLoadDiskMap = false;
     bool bVisMapReg = false;    // display two color for pair-wise map registration
@@ -46,16 +47,16 @@ struct Config
     int width = 640;
     int height = 480;
     float depthScale = 1000.0;
-    // // Asus
-    // float fx = 580;
-    // float fy = 580;
-    // float cx = 319.5;
-    // float cy = 239.5;
-    // Azure
-    float fx = 607.665;
-    float fy = 607.516;
-    float cx = 321.239;
-    float cy = 245.043;
+    // Asus
+    float fx = 580;
+    float fy = 580;
+    float cx = 319.5;
+    float cy = 239.5;
+    // // Azure
+    // float fx = 607.665;
+    // float fy = 607.516;
+    // float cx = 321.239;
+    // float cy = 245.043;
     float invfx;
     float invfy;
     Eigen::Matrix3f K;

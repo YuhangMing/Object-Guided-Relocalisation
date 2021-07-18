@@ -5,6 +5,8 @@
 #include <iostream>
 #include <fstream>
 
+// #define OBJ_DETAILS
+
 namespace fusion
 {
 
@@ -199,7 +201,9 @@ void RgbdFrame::ExtractObjects(semantic::Detector* detector, bool bBbox, bool bC
 
 	// get detected information
 	numDetection = detector->numDetection;
+#ifdef OBJ_DETAILS
 	std::cout << "# of detected object passed to c++: " << numDetection << std::endl;
+#endif
 
     vMasks.clear();
 	vLabels.clear();
@@ -370,6 +374,10 @@ void RgbdFrame::ExtractObjects(semantic::Detector* detector, bool bBbox, bool bC
 		cent_matrix.at<float>(row, 2) = pos(2);
 	}
 	// std::cout << cent_matrix << std::endl;
+	std::cout << "**** Estimate object pose takes "
+              << ( std::clock() - start ) / (double) CLOCKS_PER_SEC 
+              << "s." << std::endl;
+	start = std::clock();	
 
 	// display detected result, move back to the loop once the above ensurance removed
 	for(size_t i=0; i<numDetection; ++i){
@@ -387,6 +395,7 @@ void RgbdFrame::ExtractObjects(semantic::Detector* detector, bool bBbox, bool bC
 		// draw bboxes
     	cv::Scalar objColor = CalculateColor(vLabels[i]);
     	if (bBbox){
+			std::cout << "Draw bounding boxes disabled for now." << std::endl;
 			std::cout << "Size of pBoxes and vBoxes doesn't match, check before display." << std::endl;
 			// cv::Point2f top_left(detector->pBoxes[i*4], detector->pBoxes[i*4+1]);
 			// cv::Point2f bottom_right(detector->pBoxes[i*4+2], detector->pBoxes[i*4+3]);
@@ -406,6 +415,7 @@ void RgbdFrame::ExtractObjects(semantic::Detector* detector, bool bBbox, bool bC
 		}
 		// display text
 		if (bText){
+			std::cout << "Display texts disabled." << std::endl;
 			std::cout << "Size of pBoxes and vBoxes doesn't match, check before display." << std::endl;
 			// std::string label_text = detector->CATEGORIES[vLabels[i]];
 			// std::string score_text = std::to_string(vScores[i]);
@@ -413,9 +423,9 @@ void RgbdFrame::ExtractObjects(semantic::Detector* detector, bool bBbox, bool bC
 			// cv::putText(image, label_text, top_left, cv::FONT_HERSHEY_SIMPLEX, 1.0, objColor);
 		}
 	}
-
-
+#ifdef OBJ_DETAILS
 	std::cout << "# of detected object stored in frm: " << numDetection << std::endl;
+#endif
 
 	// Write CV::Mat to file, to check values
 	// cv::FileStorage file("/home/yohann/some_name.xml", cv::FileStorage::WRITE);
@@ -436,7 +446,7 @@ void RgbdFrame::ExtractObjects(semantic::Detector* detector, bool bBbox, bool bC
 		// }
     // fout.close();
 
-	std::cout << "**** Estimate object pose takes "
+	std::cout << "**** Draw the detected objects takes "
               << ( std::clock() - start ) / (double) CLOCKS_PER_SEC 
               << "s." << std::endl;
 }
@@ -621,7 +631,9 @@ Eigen::Matrix4f RgbdFrame::EstimateSimilarityTransform(std::vector<Eigen::Vector
 	if(vBestTarget.size() > target.size()/10 && vBestTarget.size() >= 7){
 		return SimilarityHorn(vBestSource, vBestTarget, scale);
 	} else {
-		std::cout << " ! No Enough Inliers (At least 10%/7-pts needed). Return Zero Matrix." << std::endl;
+#ifdef OBJ_DETAILS
+	std::cout << " ! No Enough Inliers (At least 10%/7-pts needed). Return Zero Matrix." << std::endl;
+#endif
 		// return SimilarityHorn(source, target, scale);
 		return Eigen::Matrix4f::Zero();
 	}

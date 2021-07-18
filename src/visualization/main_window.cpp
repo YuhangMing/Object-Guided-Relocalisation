@@ -149,6 +149,43 @@ void MainWindow::InitTextures()
 void MainWindow::InitGlSlPrograms()
 {
     // Shading w.r.t. the normal directions
+    // // Different color for two different submaps
+    // const char vertexShader[] =
+    //     "#version 330\n"
+    //     "\n"
+    //     "layout(location = 0) in vec3 position;\n"
+    //     "layout(location = 1) in vec3 a_normal;\n"
+    //     "uniform mat4 mvpMat;\n"
+    //     "uniform mat4 Tmw;\n"
+    //     "uniform float colourTaint;\n"
+    //     "uniform float colourTaint2;\n"
+    //     "out vec3 shaded_colour;\n"
+    //     "\n"
+    //     "void main(void) {\n"
+    //     "    gl_Position = mvpMat * Tmw * vec4(position, 1.0);\n"
+    //     "    vec3 lightpos = vec3(5, 5, 5);\n"
+    //     "    const float ka = 0.3;\n"
+    //     "    const float kd = 0.5;\n"
+    //     "    const float ks = 0.2;\n"
+    //     "    const float n = 20.0;\n"
+    //     "    float ax = 1.0;\n"
+    //     "    float dx = 1.0;\n"
+    //     "    float sx = 1.0;\n"
+    //     "    const float lx = 1.0;\n"
+    //     "    vec3 L = normalize(lightpos - position);\n"
+    //     "    vec3 V = normalize(vec3(0.0) - position);\n"
+    //     "    vec3 R = normalize(2 * a_normal * dot(a_normal, L) - L);\n"
+    //     "    float i1 = ax * ka * dx;\n"
+    //     "    float i2 = lx * kd * dx * max(0.0, dot(a_normal, L));\n"
+    //     "    float i3 = lx * ks * sx * pow(max(0.0, dot(R, V)), n);\n"
+    //     "    float Ix = max(0.0, min(255.0, i1 + i2 + i3));\n"
+    //     "    shaded_colour = vec3(colourTaint, Ix, colourTaint2);\n"
+    //     "}\n";
+    // // Use these two colors   
+    // // "    shaded_colour = vec3(255.0, Ix, 0.0);\n"    target
+    // // "    shaded_colour = vec3(0.0, Ix, 255.0);\n"    source
+
+    // Uniform white-ish color
     const char vertexShader[] =
         "#version 330\n"
         "\n"
@@ -178,46 +215,8 @@ void MainWindow::InitGlSlPrograms()
         "    float i2 = lx * kd * dx * max(0.0, dot(a_normal, L));\n"
         "    float i3 = lx * ks * sx * pow(max(0.0, dot(R, V)), n);\n"
         "    float Ix = max(0.0, min(255.0, i1 + i2 + i3));\n"
-        "    shaded_colour = vec3(colourTaint, Ix, colourTaint2);\n"
+        "    shaded_colour = vec3(Ix, Ix, Ix);\n"
         "}\n";
-    // Use these two colors   
-    // "    shaded_colour = vec3(255.0, Ix, 0.0);\n"    target
-    // "    shaded_colour = vec3(0.0, Ix, 255.0);\n"    source
-
-    // TODO: how to better assign different color to different submaps.
-    // // assign different uni-color to different submaps
-    // const char vertexShader[] =
-    //     "#version 330\n"
-    //     "\n"
-    //     "layout(location = 0) in vec3 position;\n"
-    //     "layout(location = 1) in vec3 a_normal;\n"
-    //     "uniform mat4 mvpMat;\n"
-    //     "uniform mat4 Tmw;\n"
-    //     "uniform float colourTaint;\n"
-    //     "out vec3 shaded_colour;\n"
-    //     "\n"
-    //     "void main(void) {\n"
-    //     "    gl_Position = mvpMat * Tmw * vec4(position, 1.0);\n"
-    //     "    vec3 lightpos = vec3(5, 5, 5);\n"
-    //     "    const float ka = 0.3;\n"
-    //     "    const float kd = 0.5;\n"
-    //     "    const float ks = 0.2;\n"
-    //     "    const float n = 20.0;\n"
-    //     "    float ax = 1.0;\n"
-    //     "    float dx = 1.0;\n"
-    //     "    float sx = 1.0;\n"
-    //     "    const float lx = 1.0;\n"
-    //     "    vec3 L = normalize(lightpos - position);\n"
-    //     "    vec3 V = normalize(vec3(0.0) - position);\n"
-    //     "    vec3 R = normalize(2 * a_normal * dot(a_normal, L) - L);\n"
-    //     "    float i1 = ax * ka * dx;\n"
-    //     "    float i2 = lx * kd * dx * max(0.0, dot(a_normal, L));\n"
-    //     "    float i3 = lx * ks * sx * pow(max(0.0, dot(R, V)), n);\n"
-    //     "    float Ix = min(max(colourTaint*2.0, 0.0), 1.0);\n"
-    //     "    float Iy = min(max(colourTaint/2.0, 0.0), 1.0);\n"
-    //     "    float Iz = min(max(colourTaint, 0.0), 1.0);\n"
-    //     "    shaded_colour = vec3(Ix, Iy, Iz);\n"
-    //     "}\n";
 
     const char fragShader[] =
         "#version 330\n"

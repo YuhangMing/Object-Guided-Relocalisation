@@ -15,9 +15,9 @@ int main(int argc, char **argv)
 
   /* Parsing Process Options */
   int sequence_id = std::atoi(argv[1]);
-  // std::string img_path = GlobalCfg.data_path + "sequence0" + argv[1];
-//   std::string img_path = GlobalCfg.data_path + "sequence0" + argv[1] + "/Construction";
-  std::string img_path = GlobalCfg.data_path + "sequence0" + argv[1] + "/Relocalisation";
+  std::string img_path = GlobalCfg.data_path + "sequence0" + argv[1];
+  // std::string img_path = GlobalCfg.data_path + "sequence0" + argv[1] + "/Construction";
+  // std::string img_path = GlobalCfg.data_path + "sequence0" + argv[1] + "/Relocalisation";
   std::cout << "-- Loading data from " << img_path << std::endl;
   GlobalCfg.map_file += argv[1];
   if(GlobalCfg.bRecord){
