@@ -24,7 +24,10 @@ Install the following dependencies:
 - (Optional) [OpenNI2](https://structure.io/openni)
 - (Optional) [Azure Kinnet](https://docs.microsoft.com/en-us/azure/kinect-dk/)
 
-## 2. REPO USAGE
+## Dataset
+To be added here.
+
+## Repo Usage
 In "main" branch: executable data_path folder_name sequence_number display_or_not
 
 eg.
