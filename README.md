@@ -41,3 +41,9 @@ eg.
 ```shell
 ./bin/vil_const 5
 ```
+
+## Future Improvement
+- [ ] ICP. Now ICP is done using Depth + Centroids, consider change it to Background + Objects + Centroids;
+- [ ] Submaps. After introducing submaps, handle track & fuse on different submaps;
+- [ ] Submaps. Manage the submaps, when to fuse multiple submaps (object and dense) into a single map.
+- [ ] Loading pose. Orthogonal issue when loading poses from text files.
