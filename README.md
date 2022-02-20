@@ -25,7 +25,7 @@ Install the following dependencies:
 - (Optional) [Azure Kinnet](https://docs.microsoft.com/en-us/azure/kinect-dk/)
 
 ## Dataset
-To be added here.
+Dataset can be download [here](https://drive.google.com/drive/folders/1dmB0OPqWaMAikERj4hPyYOWjF7TIhMth?usp=sharing).
 
 ## Repo Usage
 In "main" branch: executable data_path folder_name sequence_number display_or_not
